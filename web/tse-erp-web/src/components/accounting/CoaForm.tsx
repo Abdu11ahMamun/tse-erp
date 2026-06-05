@@ -22,7 +22,6 @@ export default function CoaForm({ allCoa }: CoaFormProps) {
     handleSubmit,
     reset,
     watch,
-    setValue,
     formState: { errors },
   } = useForm<CreateCoaRequest>({
     defaultValues: {
@@ -39,7 +38,6 @@ export default function CoaForm({ allCoa }: CoaFormProps) {
     },
   });
 
-  const watchedLedgerType = watch('ledgerHeadType');
   const watchedAccountType = watch('accountType');
 
   // When a node is selected in tree → fill form for edit

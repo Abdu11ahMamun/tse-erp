@@ -49,10 +49,11 @@ function TreeNode({ node }: TreeNodeProps) {
   const isSelected = selectedCoa?.id === node.id;
   const hasChildren = node.children.length > 0;
 
-  const handleClick = () => {
-    setSelectedCoa(node);
-    setFormMode('edit');
-  };
+    const handleClick = () => {
+        setSelectedCoa(node);
+        setFormMode('edit');
+        if (hasChildren) toggleExpanded(node.id);
+    };
 
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -115,7 +116,7 @@ interface CoaTreeProps {
 
 export default function CoaTree({ data, isLoading }: CoaTreeProps) {
   const tree = useMemo(() => buildTree(data), [data]);
-  const { setExpandedIds, expandedIds } = useCoaStore();
+  const { setExpandedIds } = useCoaStore();
 
   const expandAll = () => {
     const allIds = new Set(data.map((d) => d.id));
