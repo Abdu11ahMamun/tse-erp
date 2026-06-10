@@ -1,21 +1,28 @@
 // src/components/accounting/CoaForm.tsx
 
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { AfmCoa, CreateCoaRequest } from '../../types/coa.types';
-import { coaApi } from '../../api/coaApi';
-import { useCoaStore } from '../../store/coaStore';
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import type { AfmCoa, CreateCoaRequest } from '../../types/coa.types'
+import { coaApi } from '../../api/coaApi'
+import { useCoaStore } from '../../store/coaStore'
 
-const HARDCODED_COMPANY_ID = 1; // TODO: replace with auth context when multi-company is ready
+const HARDCODED_COMPANY_ID = 1
 
 interface CoaFormProps {
-  allCoa: AfmCoa[];
+  allCoa: AfmCoa[]
 }
 
 export default function CoaForm({ allCoa }: CoaFormProps) {
-  const { selectedCoa, formMode, setSelectedCoa, setFormMode } = useCoaStore();
-  const queryClient = useQueryClient();
+  const { selectedCoa, formMode, setSelectedCoa, setFormMode } = useCoaStore()
+  const queryClient = useQueryClient()
+
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   const {
     register,
@@ -36,11 +43,11 @@ export default function CoaForm({ allCoa }: CoaFormProps) {
       isBudgetHead: 2,
       status: 1,
     },
-  });
+  })
 
-  const watchedAccountType = watch('accountType');
+  const watchedAccountType = watch('accountType')
+  const watchedParentId = watch('parentAccountHeadId')
 
-  // When a node is selected in tree → fill form for edit
   useEffect(() => {
     if (formMode === 'edit' && selectedCoa) {
       reset({
@@ -54,50 +61,49 @@ export default function CoaForm({ allCoa }: CoaFormProps) {
         isCostCenterMandatory: selectedCoa.isCostCenterMandatory,
         isBudgetHead: selectedCoa.isBudgetHead,
         status: selectedCoa.status,
-      });
+      })
     }
-  }, [selectedCoa, formMode, reset]);
+  }, [selectedCoa, formMode, reset])
 
-  // Parent dropdown — filtered by same account type
   const parentOptions = allCoa.filter(
     (c) => c.accountType === watchedAccountType && c.id !== selectedCoa?.id
-  );
+  )
 
-  // Auto-fill Parent Account Code when parent is selected
-  const watchedParentId = watch('parentAccountHeadId');
-  const parentCoa = allCoa.find((c) => c.id === Number(watchedParentId));
-
-  // ─── Mutations ───────────────────────────────────────────────────────────────
+  const parentCoa = allCoa.find((c) => c.id === Number(watchedParentId))
 
   const createMutation = useMutation({
     mutationFn: (data: CreateCoaRequest) => coaApi.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['coa'] });
-      resetForm();
+      queryClient.invalidateQueries({ queryKey: ['coa'] })
+      resetForm()
+      showToast('Account created successfully!')
     },
-  });
+    onError: () => showToast('Failed to create account.', 'error'),
+  })
 
   const updateMutation = useMutation({
     mutationFn: (data: CreateCoaRequest) =>
       coaApi.update(selectedCoa!.id, { ...data, id: selectedCoa!.id }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['coa'] });
+      queryClient.invalidateQueries({ queryKey: ['coa'] })
+      showToast('Account updated successfully!')
     },
-  });
+    onError: () => showToast('Failed to update account.', 'error'),
+  })
 
   const deleteMutation = useMutation({
     mutationFn: () => coaApi.delete(selectedCoa!.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['coa'] });
-      resetForm();
+      queryClient.invalidateQueries({ queryKey: ['coa'] })
+      resetForm()
+      showToast('Account deleted.')
     },
-  });
-
-  // ─── Helpers ─────────────────────────────────────────────────────────────────
+    onError: () => showToast('Failed to delete account.', 'error'),
+  })
 
   const resetForm = () => {
-    setSelectedCoa(null);
-    setFormMode('create');
+    setSelectedCoa(null)
+    setFormMode('create')
     reset({
       companyId: HARDCODED_COMPANY_ID,
       accountCode: '',
@@ -109,8 +115,8 @@ export default function CoaForm({ allCoa }: CoaFormProps) {
       isCostCenterMandatory: 2,
       isBudgetHead: 2,
       status: 1,
-    });
-  };
+    })
+  }
 
   const onSubmit = (data: CreateCoaRequest) => {
     const payload: CreateCoaRequest = {
@@ -120,209 +126,258 @@ export default function CoaForm({ allCoa }: CoaFormProps) {
       isCostCenterMandatory: Number(data.isCostCenterMandatory) as 1 | 2,
       isBudgetHead: Number(data.isBudgetHead) as 1 | 2,
       status: Number(data.status) as 0 | 1,
-    };
-
-    if (formMode === 'edit') {
-      updateMutation.mutate(payload);
-    } else {
-      createMutation.mutate(payload);
     }
-  };
+    if (formMode === 'edit') updateMutation.mutate(payload)
+    else createMutation.mutate(payload)
+  }
 
-  const isSubmitting = createMutation.isPending || updateMutation.isPending;
-
-  // ─── UI ───────────────────────────────────────────────────────────────────────
+  const isSubmitting = createMutation.isPending || updateMutation.isPending
 
   return (
-    <div className="bg-white border border-gray-200 rounded p-5 overflow-y-auto h-full">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base font-semibold text-gray-800">
-          {formMode === 'edit' ? 'Edit Account Head' : 'New Account Head'}
-        </h2>
+    <div className="h-full flex flex-col bg-white">
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-lg text-sm font-medium
+          ${toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+          <span>{toast.type === 'success' ? '✓' : '✕'}</span>
+          {toast.message}
+        </div>
+      )}
+
+      {/* Form Header */}
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+        <div className="flex items-center gap-2.5">
+          <div className="w-1 h-5 bg-blue-600 rounded-full" />
+          <h2 className="text-sm font-semibold text-gray-800">
+            {formMode === 'edit' ? 'Edit Account Head' : 'New Account Head'}
+          </h2>
+        </div>
         {formMode === 'edit' && (
           <button
             type="button"
             onClick={resetForm}
-            className="text-xs text-gray-500 hover:text-gray-700 underline"
+            className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
           >
-            + New
+            <span className="text-base leading-none">+</span> New
           </button>
         )}
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      {/* Scrollable form body */}
+      <div className="flex-1 overflow-y-auto px-5 py-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
 
-        {/* Business Unit — hardcoded for now */}
-        <div>
-          <label className="form-label">Business Unit <span className="text-red-500">*</span></label>
-          <div className="form-input-readonly">Test Company Limited</div>
-        </div>
+          {/* Business Unit */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+              Business Unit <span className="text-red-400 normal-case">*</span>
+            </label>
+            <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-500 bg-gray-50">
+              Test Company Limited
+            </div>
+          </div>
 
-        {/* Account Code */}
-        <div>
-          <label className="form-label">Account Code <span className="text-red-500">*</span></label>
-          <input
-            {...register('accountCode', { required: 'Account Code is required' })}
-            placeholder="Enter Account Code"
-            className="form-input"
-          />
-          {errors.accountCode && <p className="form-error">{errors.accountCode.message}</p>}
-        </div>
-
-        {/* Account Head */}
-        <div>
-          <label className="form-label">Account Head <span className="text-red-500">*</span></label>
-          <input
-            {...register('accountHead', { required: 'Account Head is required' })}
-            placeholder="Enter Account Head"
-            className="form-input"
-          />
-          {errors.accountHead && <p className="form-error">{errors.accountHead.message}</p>}
-        </div>
-
-        {/* Ledger Head Type */}
-        <div>
-          <label className="form-label">Ledger Head <span className="text-red-500">*</span></label>
-          <div className="flex gap-4 mt-1">
-            {(['Control Account', 'Active Account'] as const).map((opt) => (
-              <label key={opt} className="radio-label">
-                <input type="radio" value={opt} {...register('ledgerHeadType')} className="mr-1" />
-                {opt}
+          {/* Account Code + Account Head side by side */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                Account Code <span className="text-red-400">*</span>
               </label>
-            ))}
-          </div>
-        </div>
+              <input
+                {...register('accountCode', { required: 'Required' })}
+                placeholder="e.g. 100000"
+                className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors
+                  ${errors.accountCode
+                    ? 'border-red-300 bg-red-50 focus:border-red-400'
+                    : 'border-gray-200 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-50'
+                  }`}
+              />
+              {errors.accountCode && (
+                <p className="text-xs text-red-500 mt-1">{errors.accountCode.message}</p>
+              )}
+            </div>
 
-        {/* Account Type */}
-        <div>
-          <label className="form-label">Account Type <span className="text-red-500">*</span></label>
-          <div className="flex gap-4 mt-1 flex-wrap">
-            {(['Asset', 'Expenditure', 'Income', 'Liability'] as const).map((opt) => (
-              <label key={opt} className="radio-label">
-                <input type="radio" value={opt} {...register('accountType')} className="mr-1" />
-                {opt}
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                Account Head <span className="text-red-400">*</span>
               </label>
-            ))}
+              <input
+                {...register('accountHead', { required: 'Required' })}
+                placeholder="e.g. ASSETS"
+                className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-colors
+                  ${errors.accountHead
+                    ? 'border-red-300 bg-red-50 focus:border-red-400'
+                    : 'border-gray-200 bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-50'
+                  }`}
+              />
+              {errors.accountHead && (
+                <p className="text-xs text-red-500 mt-1">{errors.accountHead.message}</p>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Parent Account Head */}
-        <div>
-          <label className="form-label">Parent Account Head</label>
-          <select
-            {...register('parentAccountHeadId')}
-            className="form-input"
-          >
-            <option value="">-- Select Parent --</option>
-            {parentOptions.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.accountCode} - {c.accountHead}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Parent Account Code — readonly, auto-filled */}
-        <div>
-          <label className="form-label">Parent Account Code</label>
-          <div className="form-input-readonly">
-            {parentCoa ? parentCoa.accountCode : 'Select Account Type First'}
+          {/* Ledger Head Type */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Ledger Head <span className="text-red-400">*</span>
+            </label>
+            <div className="flex gap-2">
+              {(['Control Account', 'Active Account'] as const).map((opt) => (
+                <label
+                  key={opt}
+                  className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50"
+                >
+                  <input type="radio" value={opt} {...register('ledgerHeadType')} className="accent-blue-600" />
+                  <span className="text-sm text-gray-700">{opt}</span>
+                </label>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Account Usage */}
-        <div>
-          <label className="form-label">Account Usage <span className="text-red-500">*</span></label>
-          <div className="flex gap-4 mt-1 flex-wrap">
-            {(['Bank', 'Cash', 'Ledger', 'Inter Company'] as const).map((opt) => (
-              <label key={opt} className="radio-label">
-                <input type="radio" value={opt} {...register('accountUsage')} className="mr-1" />
-                {opt}
-              </label>
-            ))}
+          {/* Account Type */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Account Type <span className="text-red-400">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['Asset', 'Liability', 'Income', 'Expenditure'] as const).map((opt) => (
+                <label
+                  key={opt}
+                  className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50"
+                >
+                  <input type="radio" value={opt} {...register('accountType')} className="accent-blue-600" />
+                  <span className="text-sm text-gray-700">{opt}</span>
+                </label>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Cost Center Mandatory */}
-        <div>
-          <label className="form-label">Cost Center Mandatory <span className="text-red-500">*</span></label>
-          <div className="flex gap-4 mt-1">
-            <label className="radio-label">
-              <input type="radio" value={1} {...register('isCostCenterMandatory')} className="mr-1" />
-              Yes
+          {/* Parent Account Head */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+              Parent Account Head
             </label>
-            <label className="radio-label">
-              <input type="radio" value={2} {...register('isCostCenterMandatory')} className="mr-1" />
-              No
-            </label>
-          </div>
-        </div>
-
-        {/* Is Budget Account Head */}
-        <div>
-          <label className="form-label">Is Budget Account Head <span className="text-red-500">*</span></label>
-          <div className="flex gap-4 mt-1">
-            <label className="radio-label">
-              <input type="radio" value={1} {...register('isBudgetHead')} className="mr-1" />
-              Yes
-            </label>
-            <label className="radio-label">
-              <input type="radio" value={2} {...register('isBudgetHead')} className="mr-1" />
-              No
-            </label>
-          </div>
-        </div>
-
-        {/* Status */}
-        <div>
-          <label className="form-label">Is Active <span className="text-red-500">*</span></label>
-          <div className="flex gap-4 mt-1">
-            <label className="radio-label">
-              <input type="radio" value={1} {...register('status')} className="mr-1" />
-              Yes
-            </label>
-            <label className="radio-label">
-              <input type="radio" value={0} {...register('status')} className="mr-1" />
-              No
-            </label>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2 pt-2">
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="btn-primary"
-          >
-            {isSubmitting ? 'Saving...' : formMode === 'edit' ? 'Update' : 'Submit'}
-          </button>
-
-          {formMode === 'edit' && (
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm('Delete this account?')) deleteMutation.mutate();
-              }}
-              disabled={deleteMutation.isPending}
-              className="btn-danger"
+            <select
+              {...register('parentAccountHeadId')}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 transition-colors"
             >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
-            </button>
-          )}
-        </div>
+              <option value="">-- Select Parent --</option>
+              {parentOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.accountCode} - {c.accountHead}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Error messages */}
-        {createMutation.isError && (
-          <p className="form-error">Failed to create. Check your input.</p>
-        )}
-        {updateMutation.isError && (
-          <p className="form-error">Failed to update. Try again.</p>
-        )}
-        {deleteMutation.isError && (
-          <p className="form-error">Failed to delete. Try again.</p>
-        )}
-      </form>
+          {/* Parent Account Code — readonly */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+              Parent Account Code
+            </label>
+            <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-500">
+              {parentCoa ? parentCoa.accountCode : 'Auto-filled from parent'}
+            </div>
+          </div>
+
+          {/* Account Usage */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Account Usage <span className="text-red-400">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['Bank', 'Cash', 'Ledger', 'Inter Company'] as const).map((opt) => (
+                <label
+                  key={opt}
+                  className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50"
+                >
+                  <input type="radio" value={opt} {...register('accountUsage')} className="accent-blue-600" />
+                  <span className="text-sm text-gray-700">{opt}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Cost Center + Budget Head */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Cost Center <span className="text-red-400">*</span>
+              </label>
+              <div className="flex gap-2">
+                {[{ label: 'Yes', value: 1 }, { label: 'No', value: 2 }].map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-300 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50"
+                  >
+                    <input type="radio" value={opt.value} {...register('isCostCenterMandatory')} className="accent-blue-600" />
+                    <span className="text-sm text-gray-700">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Budget Head <span className="text-red-400">*</span>
+              </label>
+              <div className="flex gap-2">
+                {[{ label: 'Yes', value: 1 }, { label: 'No', value: 2 }].map((opt) => (
+                  <label
+                    key={opt.value}
+                    className="flex-1 flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-300 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50"
+                  >
+                    <input type="radio" value={opt.value} {...register('isBudgetHead')} className="accent-blue-600" />
+                    <span className="text-sm text-gray-700">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Is Active */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+              Is Active <span className="text-red-400">*</span>
+            </label>
+            <div className="flex gap-2">
+              {[{ label: 'Active', value: 1 }, { label: 'Inactive', value: 0 }].map((opt) => (
+                <label
+                  key={opt.value}
+                  className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 cursor-pointer hover:border-blue-300 transition-colors has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50"
+                >
+                  <input type="radio" value={opt.value} {...register('status')} className="accent-blue-600" />
+                  <span className="text-sm text-gray-700">{opt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 pt-1 pb-2">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              {isSubmitting ? 'Saving...' : formMode === 'edit' ? 'Update' : 'Submit'}
+            </button>
+
+            {formMode === 'edit' && (
+              <button
+                type="button"
+                onClick={() => { if (confirm('Delete this account?')) deleteMutation.mutate() }}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2.5 bg-red-50 hover:bg-red-100 disabled:opacity-50 text-red-600 text-sm font-medium rounded-lg border border-red-200 transition-colors"
+              >
+                {deleteMutation.isPending ? '...' : 'Delete'}
+              </button>
+            )}
+          </div>
+
+        </form>
+      </div>
     </div>
-  );
+  )
 }
