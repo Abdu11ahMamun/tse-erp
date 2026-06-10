@@ -29,7 +29,7 @@ public class User {
     @Column(name = "role_id")
     private Long roleId;
 
-    @Column(name = "is_active", columnDefinition = "TINYINT")
+    @Column(name = "is_active", columnDefinition = "BIT")
     private Integer isActive;
 
     @Column(name = "created_at")

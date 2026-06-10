@@ -20,7 +20,7 @@ public class Module {
     @Column(name = "module_name")
     private String moduleName;
 
-    @Column(name = "is_active", columnDefinition = "TINYINT")
+    @Column(name = "is_active", columnDefinition = "BIT")
     private Integer isActive;
 
     @Column(name = "created_by")
