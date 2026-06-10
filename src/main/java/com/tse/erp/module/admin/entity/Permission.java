@@ -37,4 +37,17 @@ public class Permission {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // ✅ Auto timestamp
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // ✅ Auto update
+    @PreUpdate
+    protected void onUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 }

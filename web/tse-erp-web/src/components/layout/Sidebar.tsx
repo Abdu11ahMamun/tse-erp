@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronRight,
   Landmark,
+  Shield,
 } from 'lucide-react'
 
 interface NavItem {
@@ -28,6 +29,16 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Dashboard',
     icon: <LayoutDashboard size={18} />,
     path: '/dashboard',
+  },
+  {
+  label: 'Admin',
+    icon: <Shield size={18} />,
+    children: [
+      { label: 'Modules', path: '/admin/modules' },
+      { label: 'Roles', path: '/admin/roles' },
+      { label: 'Permissions', path: '/admin/permissions' },
+      { label: 'Role Details', path: '/admin/role-details' },
+    ],
   },
   {
     label: 'Accounting',
