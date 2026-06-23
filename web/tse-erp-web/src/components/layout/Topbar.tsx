@@ -1,12 +1,15 @@
 // src/components/layout/Topbar.tsx
 
-import { Menu, Bell, Search, Moon, User } from 'lucide-react'
+import { Menu, Bell, Search, Moon, User, LogOut } from 'lucide-react'
+import { useAuth } from '../../hooks/useAuth'
 
 interface TopbarProps {
   onToggleSidebar: () => void
 }
 
 export default function Topbar({ onToggleSidebar }: TopbarProps) {
+  const { logout, user } = useAuth()
+
   return (
     <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 flex-shrink-0">
       {/* Left */}
@@ -41,13 +44,28 @@ export default function Topbar({ onToggleSidebar }: TopbarProps) {
           <span className="absolute top-1 right-1 w-2 h-2 bg-orange-400 rounded-full"></span>
         </button>
 
-        {/* User */}
-        <button className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-          <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center">
-            <User size={14} className="text-white" />
+        {/* User + Logout */}
+        <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-lg">
+            <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center">
+              <User size={14} className="text-white" />
+            </div>
+            <div className="text-left">
+              <p className="text-sm font-medium text-gray-700 leading-none">{user?.username ?? 'Admin'}</p>
+              {user?.role && (
+                <p className="text-xs text-gray-400 mt-0.5 leading-none">{user.role}</p>
+              )}
+            </div>
           </div>
-          <span className="text-sm font-medium text-gray-700">Admin</span>
-        </button>
+
+          <button
+            onClick={logout}
+            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+            title="Logout"
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
       </div>
     </header>
   )
