@@ -3,6 +3,7 @@ package com.tse.erp.module.admin.service.impl;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
+import com.tse.erp.module.accounting.entity.AfmCoa;
 import com.tse.erp.module.admin.entity.RoleDetail;
 import com.tse.erp.module.admin.repository.ModuleRepository;
 import com.tse.erp.module.admin.repository.RoleDetailRepository;
@@ -11,6 +12,7 @@ import com.tse.erp.module.admin.service.RoleDetailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -23,7 +25,7 @@ public class RoleDetailServiceImpl implements RoleDetailService {
 
     @Override
     public List<RoleDetail> getAllRoleDetails() {
-        return roleDetailRepository.findAll();
+        return roleDetailRepository.findAllByOrderByIdDesc();
     }
 
     @Override
@@ -92,6 +94,9 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                             ", module id: " + roleDetail.getModuleId() +
                             ", menu id: " + roleDetail.getMenuId());
         }
+        roleDetail.setCreatedAt(LocalDateTime.now());
+        roleDetail.setUpdatedAt(LocalDateTime.now());
+
 
         return roleDetailRepository.save(roleDetail);
     }
@@ -154,6 +159,7 @@ public class RoleDetailServiceImpl implements RoleDetailService {
         existing.setModuleId(roleDetail.getModuleId());
         existing.setMenuId(roleDetail.getMenuId());
         existing.setPermissionId(roleDetail.getPermissionId());
+        existing.setUpdatedAt(LocalDateTime.now());
 
         return roleDetailRepository.save(existing);
     }

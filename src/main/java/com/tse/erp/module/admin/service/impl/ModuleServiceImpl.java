@@ -9,6 +9,7 @@ import com.tse.erp.module.admin.service.ModuleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -19,7 +20,7 @@ public class ModuleServiceImpl implements ModuleService {
 
     @Override
     public List<Module> getAllModules() {
-        return moduleRepository.findAll();
+        return moduleRepository.findAllByOrderByIdDesc();
     }
 
     @Override
@@ -28,6 +29,7 @@ public class ModuleServiceImpl implements ModuleService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Module not found with id: " + id));
     }
+
 
     @Override
     public Module createModule(Module module) {
@@ -50,6 +52,8 @@ public class ModuleServiceImpl implements ModuleService {
 
         module.setModuleName(module.getModuleName().trim());
         module.setIsActive(1);
+        module.setCreatedAt(LocalDateTime.now());
+        module.setUpdatedAt(LocalDateTime.now());
 
         return moduleRepository.save(module);
     }
@@ -79,6 +83,7 @@ public class ModuleServiceImpl implements ModuleService {
 
         existing.setModuleName(module.getModuleName().trim());
         existing.setIsActive(module.getIsActive());
+        existing.setUpdatedAt(LocalDateTime.now());
 
         return moduleRepository.save(existing);
     }

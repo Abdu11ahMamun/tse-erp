@@ -3,6 +3,7 @@ package com.tse.erp.module.admin.service.impl;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
+import com.tse.erp.module.accounting.entity.AfmCoa;
 import com.tse.erp.module.admin.entity.Permission;
 import com.tse.erp.module.admin.repository.ModuleRepository;
 import com.tse.erp.module.admin.repository.PermissionRepository;
@@ -10,6 +11,7 @@ import com.tse.erp.module.admin.service.PermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -21,7 +23,7 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Override
     public List<Permission> getAllPermissions() {
-        return permissionRepository.findAll();
+        return permissionRepository.findAllByOrderByIdDesc();
     }
 
     @Override
@@ -77,7 +79,8 @@ public class PermissionServiceImpl implements PermissionService {
 
         permission.setPermissionName(permission.getPermissionName().trim());
         permission.setIsActive(1);
-
+        permission.setCreatedAt(LocalDateTime.now());
+        permission.setUpdatedAt(LocalDateTime.now());
         return permissionRepository.save(permission);
     }
 
@@ -122,7 +125,7 @@ public class PermissionServiceImpl implements PermissionService {
         existing.setPermissionName(permission.getPermissionName().trim());
         existing.setModuleId(permission.getModuleId());
         existing.setIsActive(permission.getIsActive());
-
+        existing.setUpdatedAt(LocalDateTime.now());
         return permissionRepository.save(existing);
     }
 

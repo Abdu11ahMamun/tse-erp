@@ -15,4 +15,6 @@ public interface RoleDetailRepository extends JpaRepository<RoleDetail, Long> {
     // Duplicate check — same role + module + menu
     List<RoleDetail> findByRoleIdAndModuleIdAndMenuId(
             Long roleId, Long moduleId, Long menuId);
+
+    List<RoleDetail> findAllByOrderByIdDesc();
 }

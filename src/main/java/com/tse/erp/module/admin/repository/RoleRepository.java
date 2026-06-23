@@ -12,4 +12,5 @@ public interface RoleRepository extends JpaRepository<Role, Long> {
 
     // Optional er bodole List nao
     List<Role> findByRoleNameIgnoreCase(String roleName);
+    List<Role> findAllByOrderByIdDesc();
 }

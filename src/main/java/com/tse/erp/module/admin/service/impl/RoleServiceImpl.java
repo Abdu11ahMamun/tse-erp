@@ -9,6 +9,7 @@ import com.tse.erp.module.admin.service.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -19,7 +20,7 @@ public class RoleServiceImpl implements RoleService {
 
     @Override
     public List<Role> getAllRoles() {
-        return roleRepository.findAll();
+        return roleRepository.findAllByOrderByIdDesc();
     }
 
     @Override
@@ -50,6 +51,8 @@ public class RoleServiceImpl implements RoleService {
 
         role.setRoleName(role.getRoleName().trim());
         role.setIsActive(1);
+        role.setCreatedAt(LocalDateTime.now());
+        role.setUpdatedAt(LocalDateTime.now());
 
         return roleRepository.save(role);
     }
@@ -79,6 +82,7 @@ public class RoleServiceImpl implements RoleService {
 
         existing.setRoleName(role.getRoleName().trim());
         existing.setIsActive(role.getIsActive());
+        existing.setUpdatedAt(LocalDateTime.now());
 
         return roleRepository.save(existing);
     }

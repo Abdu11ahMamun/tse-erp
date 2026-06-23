@@ -16,7 +16,7 @@ public class AfmCoaServiceImpl implements AfmCoaService {
 
     @Override
     public List<AfmCoa> getAllCoas() {
-        return afmCoaRepository.findAll();
+        return afmCoaRepository.findAllByOrderByIdDesc();
     }
 
     @Override
@@ -53,4 +53,5 @@ public class AfmCoaServiceImpl implements AfmCoaService {
         AfmCoa existing = getCoaById(id);
         afmCoaRepository.delete(existing);
     }
+
 }

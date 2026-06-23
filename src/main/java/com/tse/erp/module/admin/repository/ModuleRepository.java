@@ -12,4 +12,5 @@ public interface ModuleRepository extends JpaRepository<Module, Long> {
 
     // Duplicate check er jonno
     List<Module> findByModuleNameIgnoreCase(String moduleName);
+    List<Module> findAllByOrderByIdDesc();
 }

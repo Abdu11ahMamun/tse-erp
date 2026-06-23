@@ -38,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
       { label: 'Roles', path: '/admin/roles' },
       { label: 'Permissions', path: '/admin/permissions' },
       { label: 'Role Details', path: '/admin/role-details' },
+      { label: 'Menus', path: '/admin/menus' },
     ],
   },
   {
