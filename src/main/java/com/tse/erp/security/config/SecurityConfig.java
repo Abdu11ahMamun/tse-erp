@@ -38,7 +38,11 @@ public class SecurityConfig {
                             var config = new org.springframework.web.cors
                                     .CorsConfiguration();
                             config.setAllowedOrigins(
-                                    java.util.List.of("http://localhost:5173"));
+                                      java.util.List.of(
+                                                        "http://localhost:5173",        // local dev
+                                                        "http://160.25.226.138"        // production UI (jodi same server)
+                                                      //  "http://YOUR_FRONTEND_DOMAIN"   // frontend er actual domain
+                                                ));
                             config.setAllowedMethods(
                                     java.util.List.of(
                                             "GET","POST","PUT",
