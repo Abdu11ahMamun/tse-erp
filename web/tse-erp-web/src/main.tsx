@@ -16,3 +16,6 @@ createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </StrictMode>
 )
+
+
+    // "build": "tsc -b && vite build", --> package.json
