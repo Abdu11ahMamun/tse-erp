@@ -7,11 +7,14 @@ import ModulePage from './pages/admin/ModulePage'
 import RolePage from './pages/admin/RolePage'
 import PermissionPage from './pages/admin/PermissionPage'
 import RoleDetailPage from './pages/admin/RoleDetailPage'
+import RoleCreatePage from './pages/admin/RoleCreatePage'
+import RoleViewPage from './pages/admin/RoleViewPage'
+import RoleEditPage from './pages/admin/RoleEditPage'
 import MenuPage from './pages/admin/MenuPage'
 import UserPage from './pages/admin/UserPage'
 import DashboardPage from './pages/DashboardPage'
 
-
+  
 
 function App() {
   return (
@@ -29,6 +32,10 @@ function App() {
           <Route path="/admin/role-details" element={<RoleDetailPage />} />
           <Route path="/admin/menus" element={<MenuPage />} />
           <Route path="/admin/users" element={<UserPage />} />
+
+          <Route path="/admin/roles/create" element={<RoleCreatePage />} />
+          <Route path="/admin/roles/:id/view" element={<RoleViewPage />} />
+          <Route path="/admin/roles/:id/edit" element={<RoleEditPage />} />
         </Route>
       </Route>
 
