@@ -1,21 +1,25 @@
 // src/pages/admin/RoleViewPage.tsx
 
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Pencil, Shield, Key, Search, Layers, Hash } from 'lucide-react'
-import { useState } from 'react'
+import { ArrowLeft, Pencil, Shield, Key, Search, X, List } from 'lucide-react'
+import axiosInstance from '../../api/axiosInstance'
 import { roleApi } from '../../api/roleApi'
-import { roleDetailApi } from '../../api/roleDetailApi'
-import { moduleApi } from '../../api/moduleApi'
-import { permissionApi } from '../../api/permissionApi'
-import { menuApi } from '../../api/menuApi'
 
-function parsePermissionIds(raw: string): number[] {
-  try {
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.map(Number) : []
-  } catch { return [] }
+interface AssignedPermission {
+  id: number
+  moduleId: number
+  moduleName: string
+  menuId: number
+  menuName: string
+  permissions: { id: number; permissionName: string }[]
+}
+
+interface RoleDetails {
+  roleId: number
+  roleName: string
+  assignedPermissions: AssignedPermission[]
 }
 
 export default function RoleViewPage() {
@@ -24,51 +28,31 @@ export default function RoleViewPage() {
   const roleId = Number(id)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const { data: role, isLoading: roleLoading } = useQuery({
+  const { data: role } = useQuery({
     queryKey: ['roles', roleId],
     queryFn: () => roleApi.getById(roleId),
     enabled: !!roleId,
   })
 
-  const { data: assignments = [], isLoading: assignLoading } = useQuery({
-    queryKey: ['role-details', roleId],
-    queryFn: () => roleDetailApi.getByRole(roleId),
+  const { data: roleDetails, isLoading } = useQuery<RoleDetails>({
+    queryKey: ['role-details-new', roleId],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/roles/${roleId}/details`)
+      return res.data
+    },
     enabled: !!roleId,
   })
 
-  const { data: modules = [] } = useQuery({ queryKey: ['modules'], queryFn: moduleApi.getAll })
-  const { data: allPermissions = [] } = useQuery({ queryKey: ['permissions'], queryFn: permissionApi.getAll })
-  const { data: allMenus = [] } = useQuery({ queryKey: ['menus'], queryFn: menuApi.getAll })
-
-  const permissionMap = useMemo(() => {
-    const map = new Map<number, string>()
-    allPermissions.forEach(p => map.set(p.id, p.permissionName))
-    return map
-  }, [allPermissions])
-
-  const menuMap = useMemo(() => {
-    const map = new Map<number, string>()
-    allMenus.forEach(m => map.set(m.id, m.menuName))
-    return map
-  }, [allMenus])
-
-  const moduleMap = useMemo(() => {
-    const map = new Map<number, string>()
-    modules.forEach(m => map.set(m.id, m.moduleName))
-    return map
-  }, [modules])
+  const assignedPermissions = roleDetails?.assignedPermissions ?? []
 
   const filteredAssignments = useMemo(() => {
-    if (!searchQuery.trim()) return assignments
+    if (!searchQuery.trim()) return assignedPermissions
     const q = searchQuery.toLowerCase()
-    return assignments.filter(a =>
-      (menuMap.get(a.menuId) ?? '').toLowerCase().includes(q) ||
-      (moduleMap.get(a.moduleId) ?? '').toLowerCase().includes(q)
+    return assignedPermissions.filter(a =>
+      a.menuName.toLowerCase().includes(q) ||
+      a.moduleName.toLowerCase().includes(q)
     )
-  }, [assignments, searchQuery, menuMap, moduleMap])
-
-  const getPermissionNames = (raw: string) =>
-    parsePermissionIds(raw).map(i => permissionMap.get(i) ?? `#${i}`).join(', ')
+  }, [assignedPermissions, searchQuery])
 
   return (
     <div className="h-full bg-gray-50 flex flex-col">
@@ -83,16 +67,25 @@ export default function RoleViewPage() {
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <span className="hover:text-blue-600 cursor-pointer" onClick={() => navigate('/admin/roles')}>Roles</span>
             <span>/</span>
-            <span className="font-semibold text-gray-800">{role?.roleName ?? 'View'}</span>
+            <span className="font-semibold text-gray-800">{roleDetails?.roleName ?? role?.roleName ?? 'View'}</span>
           </div>
         </div>
-        <button
-          onClick={() => navigate(`/admin/roles/${roleId}/edit`)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <Pencil size={14} />
-          Edit Role
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/admin/roles/${roleId}/edit`)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Pencil size={14} />
+            Edit Role
+          </button>
+          <button
+            onClick={() => navigate('/admin/roles')}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <List size={14} />
+            List
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
@@ -106,13 +99,13 @@ export default function RoleViewPage() {
             <h2 className="text-sm font-semibold text-gray-800">Role Information</h2>
           </div>
           <div className="px-5 py-4">
-            {roleLoading ? (
+            {isLoading ? (
               <div className="h-8 w-64 bg-gray-100 rounded-lg animate-pulse" />
             ) : (
               <div className="flex items-center gap-6 flex-wrap">
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Role Name</p>
-                  <p className="text-base font-bold text-gray-800">{role?.roleName}</p>
+                  <p className="text-base font-bold text-gray-800">{roleDetails?.roleName ?? role?.roleName}</p>
                 </div>
                 <div className="w-px h-10 bg-gray-200" />
                 <div>
@@ -134,7 +127,7 @@ export default function RoleViewPage() {
                 <div className="w-px h-10 bg-gray-200" />
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Total Assignments</p>
-                  <p className="text-sm font-bold text-blue-600">{assignments.length}</p>
+                  <p className="text-sm font-bold text-blue-600">{assignedPermissions.length}</p>
                 </div>
               </div>
             )}
@@ -146,8 +139,10 @@ export default function RoleViewPage() {
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-gray-800">Permission List</h2>
-              {assignments.length > 0 && (
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{assignments.length}</span>
+              {assignedPermissions.length > 0 && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                  {assignedPermissions.length}
+                </span>
               )}
             </div>
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5 w-56 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 transition-all">
@@ -159,6 +154,11 @@ export default function RoleViewPage() {
                 onChange={e => setSearchQuery(e.target.value)}
                 className="text-sm outline-none bg-transparent w-full text-gray-600 placeholder-gray-400"
               />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600">
+                  <X size={12} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -171,7 +171,7 @@ export default function RoleViewPage() {
               </tr>
             </thead>
             <tbody>
-              {assignLoading ? (
+              {isLoading ? (
                 <tr><td colSpan={3} className="text-center py-10 text-gray-400 text-sm">Loading...</td></tr>
               ) : filteredAssignments.length === 0 ? (
                 <tr>
@@ -200,14 +200,16 @@ export default function RoleViewPage() {
               ) : (
                 filteredAssignments.map((detail, idx) => (
                   <tr key={detail.id} className={`border-b border-gray-50 hover:bg-gray-50/80 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
-                    <td className="px-5 py-3.5 font-semibold text-gray-800">
-                      {moduleMap.get(detail.moduleId) ?? `Module ${detail.moduleId}`}
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-600">
-                      {menuMap.get(detail.menuId) ?? `Menu ${detail.menuId}`}
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-500">
-                      {getPermissionNames(detail.permissionId)}
+                    <td className="px-5 py-3.5 font-semibold text-gray-800">{detail.moduleName}</td>
+                    <td className="px-5 py-3.5 text-gray-600">{detail.menuName}</td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex flex-wrap gap-1.5">
+                        {detail.permissions.map(p => (
+                          <span key={p.id} className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-xs font-medium">
+                            {p.permissionName}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                   </tr>
                 ))

@@ -1,7 +1,12 @@
 package com.tse.erp.module.admin.controller;
 
+import com.tse.erp.module.admin.dto.AssignPermissionRequestDto;
+import com.tse.erp.module.admin.dto.PermissionDto;
+import com.tse.erp.module.admin.dto.RoleDetailResponseDto;
 import com.tse.erp.module.admin.entity.Role;
+import com.tse.erp.module.admin.service.RoleDetailService;
 import com.tse.erp.module.admin.service.RoleService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +21,7 @@ import java.util.List;
 public class RoleController {
 
     private final RoleService roleService;
+    private final RoleDetailService roleDetailService;
 
     @GetMapping
     public ResponseEntity<List<Role>> getAllRoles() {
@@ -46,4 +52,36 @@ public class RoleController {
         roleService.deleteRole(id);
         return ResponseEntity.noContent().build();
     }
+
+
+        @GetMapping("/{roleId}/details")
+        public ResponseEntity<RoleDetailResponseDto>
+        getRoleWithGroupedPermissions(
+                @PathVariable Long roleId) {
+            return ResponseEntity.ok(
+                    roleDetailService
+                            .getRoleWithGroupedPermissions(roleId));
+        }
+
+        @GetMapping("/{roleId}/available-permissions")
+        public ResponseEntity<List<PermissionDto>>
+        getAvailablePermissions(
+                @PathVariable Long roleId,
+                @RequestParam Long moduleId,
+                @RequestParam Long menuId) {
+            return ResponseEntity.ok(
+                    roleDetailService.getAvailablePermissions(
+                            roleId, moduleId, menuId));
+        }
+
+        @PostMapping("/{roleId}/permissions")
+        public ResponseEntity<RoleDetailResponseDto>
+        assignPermissions(
+                @PathVariable Long roleId,
+                @Valid @RequestBody
+                AssignPermissionRequestDto request) {
+            return ResponseEntity.ok(
+                    roleDetailService.assignPermissions(
+                            roleId, request));
+        }
 }

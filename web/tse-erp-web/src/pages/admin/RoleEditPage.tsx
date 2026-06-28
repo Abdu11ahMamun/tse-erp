@@ -5,12 +5,32 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { ArrowLeft, Trash2, ChevronDown, X, Search, List, Shield, Key } from 'lucide-react'
+import axiosInstance from '../../api/axiosInstance'
+import { moduleApi } from '../../api/moduleApi'
+import { menuApi } from '../../api/menuApi'
 import { roleApi } from '../../api/roleApi'
 import { roleDetailApi } from '../../api/roleDetailApi'
-import { moduleApi } from '../../api/moduleApi'
-import { permissionApi } from '../../api/permissionApi'
-import { menuApi } from '../../api/menuApi'
 import type { CreateRoleRequest } from '../../types/role.types'
+
+interface AssignedPermission {
+  id: number
+  moduleId: number
+  moduleName: string
+  menuId: number
+  menuName: string
+  permissions: { id: number; permissionName: string }[]
+}
+
+interface RoleDetails {
+  roleId: number
+  roleName: string
+  assignedPermissions: AssignedPermission[]
+}
+
+interface AvailablePermission {
+  id: number
+  permissionName: string
+}
 
 function Toast({ message, type }: { message: string; type: 'success' | 'error' }) {
   return (
@@ -22,17 +42,10 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
   )
 }
 
-function parsePermissionIds(raw: string): number[] {
-  try {
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.map(Number) : []
-  } catch { return [] }
-}
-
 function PermissionMultiSelect({
   options, selected, onChange, disabled,
 }: {
-  options: { id: number; permissionName: string }[]
+  options: AvailablePermission[]
   selected: number[]
   onChange: (ids: number[]) => void
   disabled: boolean
@@ -82,7 +95,16 @@ function PermissionMultiSelect({
       </div>
 
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 max-h-52 overflow-y-auto">
+        // <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 max-h-52 overflow-y-auto">
+        // <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-52 overflow-y-auto">
+        <div className="fixed bg-white border border-gray-200 rounded-xl shadow-xl z-[9999] max-h-52 overflow-y-auto"
+  style={{
+    width: ref.current?.getBoundingClientRect().width,
+    top: ref.current ? ref.current.getBoundingClientRect().bottom + window.scrollY + 4 : 0,
+    left: ref.current?.getBoundingClientRect().left,
+  }}
+>
+          
           {options.length === 0 ? (
             <div className="px-4 py-4 text-sm text-gray-400 text-center">No permissions available</div>
           ) : (
@@ -116,8 +138,8 @@ export default function RoleEditPage() {
   const roleId = Number(id)
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
-  const [selectedModuleId, setSelectedModuleId] = useState<number | ''>('')
-  const [selectedMenuId, setSelectedMenuId] = useState<number | ''>('')
+  const [selectedModuleId, setSelectedModuleId] = useState<number | null>(null)
+  const [selectedMenuId, setSelectedMenuId] = useState<number | null>(null)
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isActiveToggle, setIsActiveToggle] = useState<0 | 1>(1)
@@ -126,6 +148,16 @@ export default function RoleEditPage() {
     setToast({ message: msg, type })
     setTimeout(() => setToast(null), 3000)
   }
+
+  // ── Queries ──
+  const { data: roleDetails, isLoading: detailsLoading } = useQuery<RoleDetails>({
+    queryKey: ['role-details-new', roleId],
+    queryFn: async () => {
+      const res = await axiosInstance.get(`/roles/${roleId}/details`)
+      return res.data
+    },
+    enabled: !!roleId,
+  })
 
   const { data: role } = useQuery({
     queryKey: ['roles', roleId],
@@ -137,89 +169,77 @@ export default function RoleEditPage() {
     if (role) setIsActiveToggle(role.isActive)
   }, [role])
 
-  const { data: assignments = [], isLoading: assignLoading } = useQuery({
-    queryKey: ['role-details', roleId],
-    queryFn: () => roleDetailApi.getByRole(roleId),
-    enabled: !!roleId,
+  const { data: modules = [] } = useQuery({
+    queryKey: ['modules'],
+    queryFn: moduleApi.getAll,
   })
-
-  const { data: modules = [] } = useQuery({ queryKey: ['modules'], queryFn: moduleApi.getAll })
-  const { data: allPermissions = [] } = useQuery({ queryKey: ['permissions'], queryFn: permissionApi.getAll })
-  const { data: allMenus = [] } = useQuery({ queryKey: ['menus'], queryFn: menuApi.getAll })
 
   const { data: moduleMenus = [] } = useQuery({
     queryKey: ['menus', 'module', selectedModuleId],
     queryFn: () => menuApi.getByModule(Number(selectedModuleId)),
-    enabled: !!selectedModuleId,
+    enabled: selectedModuleId !== null,
   })
 
-  const { data: modulePermissions = [] } = useQuery({
-    queryKey: ['permissions', 'module', selectedModuleId],
-    queryFn: () => permissionApi.getByModule(Number(selectedModuleId)),
-    enabled: !!selectedModuleId,
+  // Only show leaf menus (isParent === 0) — parent menus have no permissions
+  const leafMenus = moduleMenus.filter(m => m.isParent === 0)
+
+  const { data: availablePermissions = [] } = useQuery<AvailablePermission[]>({
+    queryKey: ['available-permissions', roleId, selectedModuleId, selectedMenuId],
+    queryFn: async () => {
+      const res = await axiosInstance.get(
+        `/roles/${roleId}/available-permissions?moduleId=${selectedModuleId}&menuId=${selectedMenuId}`
+      )
+      return res.data
+    },
+    enabled: selectedModuleId !== null && selectedMenuId !== null,
   })
 
   const { register, handleSubmit, formState: { errors } } = useForm<CreateRoleRequest>({
     values: role ? { roleName: role.roleName, isActive: role.isActive } : undefined,
   })
 
-  const alreadyAssignedPermIds = useMemo(() => {
-    if (!selectedModuleId || !selectedMenuId) return new Set<number>()
-    const ids = new Set<number>()
-    assignments
-      .filter(a => a.moduleId === Number(selectedModuleId) && a.menuId === Number(selectedMenuId))
-      .forEach(a => parsePermissionIds(a.permissionId).forEach(i => ids.add(i)))
-    return ids
-  }, [assignments, selectedModuleId, selectedMenuId])
-
-  const availablePermissions = modulePermissions.filter(p => !alreadyAssignedPermIds.has(p.id))
-
-  const permissionMap = useMemo(() => {
-    const map = new Map<number, string>()
-    allPermissions.forEach(p => map.set(p.id, p.permissionName))
-    return map
-  }, [allPermissions])
-
-  const menuMap = useMemo(() => {
-    const map = new Map<number, string>()
-    allMenus.forEach(m => map.set(m.id, m.menuName))
-    return map
-  }, [allMenus])
-
-  const moduleMap = useMemo(() => {
-    const map = new Map<number, string>()
-    modules.forEach(m => map.set(m.id, m.moduleName))
-    return map
-  }, [modules])
+  const assignedPermissions = roleDetails?.assignedPermissions ?? []
 
   const filteredAssignments = useMemo(() => {
-    if (!searchQuery.trim()) return assignments
+    if (!searchQuery.trim()) return assignedPermissions
     const q = searchQuery.toLowerCase()
-    return assignments.filter(a =>
-      (menuMap.get(a.menuId) ?? '').toLowerCase().includes(q) ||
-      (moduleMap.get(a.moduleId) ?? '').toLowerCase().includes(q)
+    return assignedPermissions.filter(a =>
+      a.menuName.toLowerCase().includes(q) ||
+      a.moduleName.toLowerCase().includes(q)
     )
-  }, [assignments, searchQuery, menuMap, moduleMap])
+  }, [assignedPermissions, searchQuery])
 
+  // ── Mutations ──
   const updateRoleMutation = useMutation({
     mutationFn: (data: CreateRoleRequest) => roleApi.update(roleId, { ...data, id: roleId }),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['roles'] }); showToast('Role updated!') },
-    onError: (e: any) => showToast(e?.response?.data?.message || 'Update failed.', 'error'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roles'] })
+      showToast('Role updated!')
+    },
+    onError: (e: any) => showToast(e?.message || 'Update failed.', 'error'),
   })
 
   const assignMutation = useMutation({
-    mutationFn: roleDetailApi.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['role-details', roleId] })
-      setSelectedModuleId(''); setSelectedMenuId(''); setSelectedPermissions([])
+    mutationFn: async (payload: { moduleId: number; menuId: number; permissionIds: number[] }) => {
+      const res = await axiosInstance.post(`/roles/${roleId}/permissions`, payload)
+      return res.data as RoleDetails
+    },
+    onSuccess: (updatedDetails) => {
+      queryClient.setQueryData(['role-details-new', roleId], updatedDetails)
+      setSelectedModuleId(null)
+      setSelectedMenuId(null)
+      setSelectedPermissions([])
       showToast('Permissions assigned!')
     },
-    onError: (e: any) => showToast(e?.response?.data?.message || 'Assign failed.', 'error'),
+    onError: (e: any) => showToast(e?.message || 'Assign failed.', 'error'),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: roleDetailApi.delete,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['role-details', roleId] }); showToast('Removed.') },
+    mutationFn: (detailId: number) => roleDetailApi.delete(detailId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['role-details-new', roleId] })
+      showToast('Assignment removed.')
+    },
     onError: () => showToast('Remove failed.', 'error'),
   })
 
@@ -228,14 +248,28 @@ export default function RoleEditPage() {
     if (!selectedMenuId) return showToast('Select a menu.', 'error')
     if (selectedPermissions.length === 0) return showToast('Select at least one permission.', 'error')
     assignMutation.mutate({
-      roleId, moduleId: Number(selectedModuleId),
-      menuId: Number(selectedMenuId),
-      permissionId: JSON.stringify(selectedPermissions),
+      moduleId: selectedModuleId,
+      menuId: selectedMenuId,
+      permissionIds: selectedPermissions,
     })
   }
 
-  const getPermissionNames = (raw: string) =>
-    parsePermissionIds(raw).map(i => permissionMap.get(i) ?? `#${i}`).join(', ')
+  // DEBUG
+useEffect(() => {
+  console.log('🔵 selectedModuleId:', selectedModuleId, typeof selectedModuleId)
+  console.log('🔵 selectedMenuId:', selectedMenuId, typeof selectedMenuId)
+  console.log('🔵 enabled:', selectedModuleId !== null && selectedMenuId !== null)
+}, [selectedModuleId, selectedMenuId])
+// DEBUG
+useEffect(() => {
+  console.log('🟢 availablePermissions:', availablePermissions)
+}, [availablePermissions])
+
+// DEBUG  
+useEffect(() => {
+  console.log('🟡 moduleMenus:', moduleMenus)
+  console.log('🟡 leafMenus:', leafMenus)
+}, [moduleMenus])
 
   return (
     <div className="h-full bg-gray-50 flex flex-col">
@@ -251,7 +285,7 @@ export default function RoleEditPage() {
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <span className="hover:text-blue-600 cursor-pointer" onClick={() => navigate('/admin/roles')}>Roles</span>
             <span>/</span>
-            <span className="font-semibold text-gray-800">{role?.roleName ?? 'Edit'}</span>
+            <span className="font-semibold text-gray-800">{roleDetails?.roleName ?? role?.roleName ?? 'Edit'}</span>
           </div>
         </div>
         <button
@@ -266,7 +300,7 @@ export default function RoleEditPage() {
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
         {/* Role info card */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-gray-100">
             <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
               <Shield size={13} className="text-white" />
@@ -274,8 +308,8 @@ export default function RoleEditPage() {
             <h2 className="text-sm font-semibold text-gray-800">Role Information</h2>
           </div>
           <div className="px-5 py-4">
-            <form className="flex items-end gap-4 flex-wrap">
-              <div className="flex-1 min-w-52">
+            <form className="flex items-center gap-4">
+              <div className="flex-1">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                   Role Name <span className="text-red-400">*</span>
                 </label>
@@ -286,7 +320,7 @@ export default function RoleEditPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-3 pb-1">
+              <div className="flex items-center gap-3 mt-5">
                 <span className="text-sm font-medium text-gray-700">Is Active</span>
                 <button
                   type="button"
@@ -303,7 +337,7 @@ export default function RoleEditPage() {
                 type="button"
                 onClick={handleSubmit(data => updateRoleMutation.mutate({ ...data, isActive: isActiveToggle }))}
                 disabled={updateRoleMutation.isPending}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
+                className="mt-5 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 {updateRoleMutation.isPending ? 'Saving...' : 'Save'}
               </button>
@@ -328,10 +362,11 @@ export default function RoleEditPage() {
                   Module Name <span className="text-red-400">*</span>
                 </label>
                 <select
-                  value={selectedModuleId}
+                  value={selectedModuleId ?? ''}
                   onChange={e => {
-                    setSelectedModuleId(e.target.value ? Number(e.target.value) : '')
-                    setSelectedMenuId(''); setSelectedPermissions([])
+                    setSelectedModuleId(e.target.value ? Number(e.target.value) : null)
+                    setSelectedMenuId(null)
+                    setSelectedPermissions([])
                   }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 bg-white"
                 >
@@ -346,13 +381,16 @@ export default function RoleEditPage() {
                   Menu Name <span className="text-red-400">*</span>
                 </label>
                 <select
-                  value={selectedMenuId}
-                  onChange={e => { setSelectedMenuId(e.target.value ? Number(e.target.value) : ''); setSelectedPermissions([]) }}
-                  disabled={!selectedModuleId}
+                  value={selectedMenuId ?? ''}
+                  onChange={e => {
+                    setSelectedMenuId(e.target.value ? Number(e.target.value) : null)
+                    setSelectedPermissions([])
+                  }}
+                  disabled={selectedModuleId === null}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">-- Select --</option>
-                  {moduleMenus.map(m => <option key={m.id} value={m.id}>{m.menuName}</option>)}
+                  {leafMenus.map(m => <option key={m.id} value={m.id}>{m.menuName}</option>)}
                 </select>
               </div>
 
@@ -365,14 +403,16 @@ export default function RoleEditPage() {
                   options={availablePermissions}
                   selected={selectedPermissions}
                   onChange={setSelectedPermissions}
-                  disabled={!selectedMenuId}
+                  disabled={selectedMenuId === null}
                 />
               </div>
+
+  
 
               {/* Add button */}
               <button
                 onClick={handleAssign}
-                disabled={assignMutation.isPending || selectedPermissions.length === 0 || !selectedMenuId}
+                disabled={assignMutation.isPending || selectedPermissions.length === 0 || selectedMenuId === null}
                 className="w-10 h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center transition-colors flex-shrink-0 text-lg font-bold shadow-sm"
                 title="Assign"
               >
@@ -387,12 +427,14 @@ export default function RoleEditPage() {
         {/* Permission list card */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-800">
-              Permission List
-              {assignments.length > 0 && (
-                <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{assignments.length}</span>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-gray-800">Permission List</h2>
+              {assignedPermissions.length > 0 && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                  {assignedPermissions.length}
+                </span>
               )}
-            </h2>
+            </div>
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5 w-56 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 transition-all">
               <Search size={13} className="text-gray-400 flex-shrink-0" />
               <input
@@ -420,7 +462,7 @@ export default function RoleEditPage() {
               </tr>
             </thead>
             <tbody>
-              {assignLoading ? (
+              {detailsLoading ? (
                 <tr><td colSpan={4} className="text-center py-10 text-gray-400 text-sm">Loading...</td></tr>
               ) : filteredAssignments.length === 0 ? (
                 <tr>
@@ -441,14 +483,16 @@ export default function RoleEditPage() {
               ) : (
                 filteredAssignments.map((detail, idx) => (
                   <tr key={detail.id} className={`border-b border-gray-50 hover:bg-gray-50/80 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
-                    <td className="px-5 py-3.5 font-semibold text-gray-800">
-                      {moduleMap.get(detail.moduleId) ?? `Module ${detail.moduleId}`}
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-600">
-                      {menuMap.get(detail.menuId) ?? `Menu ${detail.menuId}`}
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-500">
-                      {getPermissionNames(detail.permissionId)}
+                    <td className="px-5 py-3.5 font-semibold text-gray-800">{detail.moduleName}</td>
+                    <td className="px-5 py-3.5 text-gray-600">{detail.menuName}</td>
+                    <td className="px-5 py-3.5">
+                      <div className="flex flex-wrap gap-1.5">
+                        {detail.permissions.map(p => (
+                          <span key={p.id} className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-xs font-medium">
+                            {p.permissionName}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <button
