@@ -200,19 +200,16 @@ public class RoleDetailServiceImpl implements RoleDetailService {
         List<AssignedPermissionGroupDto> groups = details.stream()
                 .map(detail -> {
 
-                    // Module name fetch
                     String moduleName = moduleRepository
                             .findById(detail.getModuleId())
                             .map(m -> m.getModuleName())
                             .orElse("Unknown");
 
-                    // Menu name fetch
                     String menuName = menuRepository
                             .findById(detail.getMenuId())
                             .map(m -> m.getMenuName())
                             .orElse("Unknown");
 
-                    // Permission JSON parse
                     List<PermissionDto> permissionDtos =
                             parsePermissionIds(
                                     detail.getPermissionId())
@@ -239,9 +236,24 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                 })
                 .collect(Collectors.toList());
 
+        // ✅ Calculate counts from groups — no extra DB query
+        int assignedMenuCount = groups.size();
+        int assignedPermissionCount = groups.stream()
+                .mapToInt(g -> g.getPermissions().size())
+                .sum();
+
+        // ✅ Format createdAt
+        String createdAt = role.getCreatedAt() != null
+                ? role.getCreatedAt().toLocalDate().toString()
+                : null;
+
         return RoleDetailResponseDto.builder()
                 .roleId(role.getId())
                 .roleName(role.getRoleName())
+                .status(role.getIsActive() == 1)
+                .createdAt(createdAt)
+                .assignedMenuCount(assignedMenuCount)
+                .assignedPermissionCount(assignedPermissionCount)
                 .assignedPermissions(groups)
                 .build();
     }

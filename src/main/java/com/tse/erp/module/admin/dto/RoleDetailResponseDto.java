@@ -11,5 +11,11 @@ import java.util.List;
 public class RoleDetailResponseDto {
     private Long roleId;
     private String roleName;
+    private Boolean status;
+    private String createdAt;
+
+    private int assignedMenuCount;
+    private int assignedPermissionCount;
+
     private List<AssignedPermissionGroupDto> assignedPermissions;
 }
