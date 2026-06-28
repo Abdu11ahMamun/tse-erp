@@ -1,17 +1,16 @@
 // src/pages/admin/RolePage.tsx
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus, Eye, Pencil, Trash2 } from 'lucide-react'
-import { roleApi } from '../../api/roleApi'
 import { useNavigate, useLocation } from 'react-router-dom'
-
-
+import { Plus, Eye, Pencil, Trash2, Shield } from 'lucide-react'
+import { roleApi } from '../../api/roleApi'
+import { ListPage, StatusBadge } from '../../components/ui/ListPage'
 
 function Toast({ message, type }: { message: string; type: 'success' | 'error' }) {
   return (
-    <div className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-lg text-sm font-medium
-      ${type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+    <div className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-xl text-sm font-medium
+      ${type === 'success' ? 'bg-gray-900 text-white' : 'bg-red-600 text-white'}`}>
       <span>{type === 'success' ? '✓' : '✕'}</span>
       {message}
     </div>
@@ -19,34 +18,24 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
 }
 
 function ConfirmModal({ isOpen, onConfirm, onCancel, roleName }: {
-  isOpen: boolean
-  onConfirm: () => void
-  onCancel: () => void
-  roleName: string
+  isOpen: boolean; onConfirm: () => void; onCancel: () => void; roleName: string
 }) {
   if (!isOpen) return null
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/30" onClick={onCancel} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 z-50 p-6">
-        <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Trash2 size={20} className="text-red-600" />
-        </div>
-        <h3 className="text-base font-semibold text-gray-800 text-center mb-1">Delete Role</h3>
-        <p className="text-sm text-gray-500 text-center mb-6">
-          Are you sure you want to delete <span className="font-semibold text-gray-700">"{roleName}"</span>? This action cannot be undone.
+      <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 z-50 p-6">
+        <h3 className="text-base font-semibold text-gray-900 mb-1">Delete role?</h3>
+        <p className="text-sm text-gray-500 mb-6">
+          <span className="font-medium text-gray-700">"{roleName}"</span> will be permanently removed. This cannot be undone.
         </p>
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 text-sm font-medium rounded-lg transition-colors"
-          >
+        <div className="flex gap-2.5">
+          <button onClick={onCancel}
+            className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
             Cancel
           </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
-          >
+          <button onClick={onConfirm}
+            className="flex-1 py-2 text-sm font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
             Delete
           </button>
         </div>
@@ -57,52 +46,31 @@ function ConfirmModal({ isOpen, onConfirm, onCancel, roleName }: {
 
 export default function RolePage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3000)
   }
 
-  const { data: roles = [], isLoading } = useQuery({
-    queryKey: ['roles'],
-    queryFn: roleApi.getAll,
-  })
+  useEffect(() => {
+    if (location.state?.toast) { showToast(location.state.toast); window.history.replaceState({}, '') }
+  }, [])
+
+  const { data: roles = [], isLoading } = useQuery({ queryKey: ['roles'], queryFn: roleApi.getAll })
 
   const deleteMutation = useMutation({
     mutationFn: roleApi.delete,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roles'] })
-      setDeleteTarget(null)
-      showToast('Role deleted successfully.')
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['roles'] }); setDeleteTarget(null); showToast('Role deleted.') },
     onError: () => showToast('Failed to delete role.', 'error'),
   })
 
-
-
-  const location = useLocation()
-  useEffect(() => {
-    if (location.state?.toast) {
-      showToast(location.state.toast)
-      window.history.replaceState({}, '')
-    }
-  }, [])
-
-  const totalPages = Math.ceil(roles.length / itemsPerPage)
-  const paginatedRoles = roles.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  )
-
   return (
-    <div className="p-6">
+    <>
       {toast && <Toast message={toast.message} type={toast.type} />}
-
       <ConfirmModal
         isOpen={!!deleteTarget}
         roleName={deleteTarget?.name ?? ''}
@@ -110,113 +78,98 @@ export default function RolePage() {
         onCancel={() => setDeleteTarget(null)}
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-800">Roles</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage user roles and permissions</p>
-        </div>
-        <button
-          onClick={() => navigate('/admin/roles/create')}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <Plus size={15} />
-          New Role
-        </button>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">#</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Role Name</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Created At</th>
-              <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {isLoading ? (
-              <tr><td colSpan={5} className="text-center py-10 text-gray-400">Loading...</td></tr>
-            ) : roles.length === 0 ? (
-              <tr><td colSpan={5} className="text-center py-10 text-gray-400">No roles found</td></tr>
-            ) : (
-              paginatedRoles.map((role, index) => (
-                <tr key={role.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-gray-400">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                  <td className="px-4 py-3 font-medium text-gray-800">{role.roleName}</td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                      ${role.isActive === 1 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {role.isActive === 1 ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500">
-                    {role.createdAt ? new Date(role.createdAt).toLocaleDateString('en-GB', {
-                      day: '2-digit', month: 'short', year: 'numeric'
-                    }) : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <button
-                        onClick={() => navigate(`/admin/roles/${role.id}/view`)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                        title="View"
-                      >
-                        <Eye size={14} />
-                      </button>
-                      <button
-                        onClick={() => navigate(`/admin/roles/${role.id}/edit`)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                        title="Edit"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        onClick={() => setDeleteTarget({ id: role.id, name: role.roleName })}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-            <p className="text-xs text-gray-500">
-              Showing {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, roles.length)} of {roles.length}
-            </p>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors"
-              >Previous</button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+      <ListPage
+        title="Roles"
+        description="Manage access roles and permission groups"
+        data={roles}
+        keyExtractor={r => r.id}
+        isLoading={isLoading}
+        searchPlaceholder="Search roles..."
+        searchKeys={['roleName']}
+        emptyIcon={<Shield size={20} />}
+        emptyTitle="No roles found"
+        emptyDescription="Create your first role to get started"
+        primaryAction={{
+          label: 'New Role',
+          onClick: () => navigate('/admin/roles/create'),
+          icon: <Plus size={14} />,
+        }}
+        filters={[
+          {
+            key: 'isActive',
+            label: 'Status',
+            options: [
+              { label: 'All', value: 'all' },
+              { label: 'Active', value: '1' },
+              { label: 'Inactive', value: '0' },
+            ],
+          },
+        ]}
+        columns={[
+          {
+            key: 'roleName',
+            label: 'Role Name',
+            sortable: true,
+            render: (row) => (
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                  <Shield size={13} className="text-gray-500" />
+                </div>
+                <span className="text-[14px] font-medium text-gray-900">{row.roleName}</span>
+              </div>
+            ),
+          },
+          {
+            key: 'isActive',
+            label: 'Status',
+            width: 'w-28',
+            render: (row) => <StatusBadge active={row.isActive === 1} />,
+          },
+          {
+            key: 'createdAt',
+            label: 'Created',
+            sortable: true,
+            width: 'w-36',
+            render: (row) => (
+              <span className="text-[13px] text-gray-400">
+                {row.createdAt ? new Date(row.createdAt).toLocaleDateString('en-GB', {
+                  day: '2-digit', month: 'short', year: 'numeric'
+                }) : '—'}
+              </span>
+            ),
+          },
+          {
+            key: '_actions',
+            label: '',
+            width: 'w-28',
+            render: (row) => (
+              <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                 <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  className={`w-8 h-8 text-xs rounded-lg transition-colors
-                    ${currentPage === page ? 'bg-blue-600 text-white' : 'border border-gray-200 hover:bg-gray-50 text-gray-600'}`}
-                >{page}</button>
-              ))}
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg disabled:opacity-40 hover:bg-gray-50 transition-colors"
-              >Next</button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
+                  onClick={e => { e.stopPropagation(); navigate(`/admin/roles/${row.id}/view`) }}
+                  className="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                  title="View"
+                >
+                  <Eye size={13} />
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); navigate(`/admin/roles/${row.id}/edit`) }}
+                  className="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                  title="Edit"
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); setDeleteTarget({ id: row.id, name: row.roleName }) }}
+                  className="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ),
+          },
+        ]}
+      />
+    </>
   )
 }
