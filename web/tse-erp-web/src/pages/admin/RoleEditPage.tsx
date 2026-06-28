@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { ArrowLeft, Trash2, ChevronDown, X, Search, Shield, Key, Plus, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Trash2, ChevronDown, X, Search, Shield, Key, Plus, ChevronRight, Pencil } from 'lucide-react'
 import axiosInstance from '../../api/axiosInstance'
 import { moduleApi } from '../../api/moduleApi'
 import { menuApi } from '../../api/menuApi'
@@ -12,7 +12,6 @@ import { roleApi } from '../../api/roleApi'
 import { roleDetailApi } from '../../api/roleDetailApi'
 import type { CreateRoleRequest } from '../../types/role.types'
 
-// ── Types ────────────────────────────────────────────────────────────────────
 interface PermissionItem { id: number; permissionName: string }
 interface AssignedPermission {
   id: number; moduleId: number; moduleName: string
@@ -20,7 +19,6 @@ interface AssignedPermission {
 }
 interface RoleDetails { roleId: number; roleName: string; assignedPermissions: AssignedPermission[] }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
 function getChipColor(name: string) {
   const n = name.toLowerCase()
   if (n.includes('delete') || n.includes('remove')) return 'bg-red-100 text-red-700 border-red-200'
@@ -30,7 +28,6 @@ function getChipColor(name: string) {
   return 'bg-gray-100 text-gray-600 border-gray-200'
 }
 
-// ── Toast ────────────────────────────────────────────────────────────────────
 function Toast({ message, type }: { message: string; type: 'success' | 'error' }) {
   return (
     <div className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-xl text-sm font-medium
@@ -41,7 +38,6 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
   )
 }
 
-// ── Confirm Modal ─────────────────────────────────────────────────────────────
 function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmLabel = 'Confirm', danger = false }: {
   isOpen: boolean; title: string; message: string
   onConfirm: () => void; onCancel: () => void
@@ -70,19 +66,17 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmLabe
   )
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
 function SkeletonRow() {
   return (
     <tr className="border-b border-gray-50">
       <td className="px-5 py-3.5"><div className="h-4 w-28 bg-gray-100 rounded animate-pulse" /></td>
       <td className="px-5 py-3.5"><div className="h-4 w-24 bg-gray-100 rounded animate-pulse" /></td>
       <td className="px-5 py-3.5"><div className="flex gap-1.5"><div className="h-6 w-20 bg-gray-100 rounded-full animate-pulse" /><div className="h-6 w-16 bg-gray-100 rounded-full animate-pulse" /></div></td>
-      <td className="px-5 py-3.5"><div className="h-6 w-6 bg-gray-100 rounded animate-pulse mx-auto" /></td>
+      <td className="px-5 py-3.5"><div className="h-6 w-12 bg-gray-100 rounded animate-pulse mx-auto" /></td>
     </tr>
   )
 }
 
-// ── MultiSelect ───────────────────────────────────────────────────────────────
 function PermissionMultiSelect({ options, selected, onChange, disabled }: {
   options: PermissionItem[]; selected: number[]
   onChange: (ids: number[]) => void; disabled: boolean
@@ -103,25 +97,13 @@ function PermissionMultiSelect({ options, selected, onChange, disabled }: {
     if (disabled) return
     if (ref.current) {
       const rect = ref.current.getBoundingClientRect()
-      setDropdownStyle({
-        position: 'fixed',
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left,
-        width: rect.width,
-        zIndex: 9999,
-      })
+      setDropdownStyle({ position: 'fixed', top: rect.bottom + window.scrollY + 4, left: rect.left, width: rect.width, zIndex: 9999 })
     }
     setOpen(!open)
   }
 
-  const toggle = (id: number) =>
-    onChange(selected.includes(id) ? selected.filter(s => s !== id) : [...selected, id])
-
-  const remove = (id: number, e: React.MouseEvent) => {
-    e.stopPropagation()
-    onChange(selected.filter(s => s !== id))
-  }
-
+  const toggle = (id: number) => onChange(selected.includes(id) ? selected.filter(s => s !== id) : [...selected, id])
+  const remove = (id: number, e: React.MouseEvent) => { e.stopPropagation(); onChange(selected.filter(s => s !== id)) }
   const selectedOptions = options.filter(o => selected.includes(o.id))
 
   return (
@@ -140,15 +122,12 @@ function PermissionMultiSelect({ options, selected, onChange, disabled }: {
           ))}
         <ChevronDown size={14} className={`ml-auto text-gray-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </div>
-
       {open && (
         <div style={dropdownStyle} className="bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
           {options.length === 0
             ? <div className="px-4 py-4 text-sm text-gray-400 text-center">No permissions available</div>
             : options.map(opt => (
-              <label key={opt.id}
-                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors
-                  ${selected.includes(opt.id) ? 'bg-blue-50' : ''}`}>
+              <label key={opt.id} className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors ${selected.includes(opt.id) ? 'bg-blue-50' : ''}`}>
                 <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0
                   ${selected.includes(opt.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                   {selected.includes(opt.id) && (
@@ -167,7 +146,6 @@ function PermissionMultiSelect({ options, selected, onChange, disabled }: {
   )
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function RoleEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -180,8 +158,10 @@ export default function RoleEditPage() {
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isActiveToggle, setIsActiveToggle] = useState<0 | 1>(1)
+  const [editingRowId, setEditingRowId] = useState<number | null>(null) // which row is being edited
+  const [pendingAssign, setPendingAssign] = useState<{ moduleId: number; menuId: number; permissionIds: number[] } | null>(null)
   const [confirmModal, setConfirmModal] = useState<{
-    open: boolean; title: string; message: string; onConfirm: () => void; danger?: boolean
+    open: boolean; title: string; message: string; onConfirm: () => void; danger?: boolean; confirmLabel?: string
   }>({ open: false, title: '', message: '', onConfirm: () => {} })
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -189,8 +169,8 @@ export default function RoleEditPage() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  const confirm = (title: string, message: string, onConfirm: () => void, danger = false) => {
-    setConfirmModal({ open: true, title, message, onConfirm, danger })
+  const openConfirm = (title: string, message: string, onConfirm: () => void, danger = false, confirmLabel = 'Confirm') => {
+    setConfirmModal({ open: true, title, message, onConfirm, danger, confirmLabel })
   }
 
   // ── Queries ──
@@ -232,7 +212,6 @@ export default function RoleEditPage() {
 
   const assignedPermissions = roleDetails?.assignedPermissions ?? []
 
-  // ── Search — filter by module, menu, permission name ──
   const filteredAssignments = useMemo(() => {
     if (!searchQuery.trim()) return assignedPermissions
     const q = searchQuery.toLowerCase()
@@ -257,6 +236,7 @@ export default function RoleEditPage() {
       queryClient.setQueryData(['role-details-new', roleId], updated)
       queryClient.invalidateQueries({ queryKey: ['available-permissions', roleId, selectedModuleId, selectedMenuId] })
       setSelectedModuleId(null); setSelectedMenuId(null); setSelectedPermissions([])
+      setEditingRowId(null); setPendingAssign(null)
       showToast('Permissions assigned!')
     },
     onError: (e: any) => showToast(e?.message || 'Assign failed.', 'error'),
@@ -264,36 +244,56 @@ export default function RoleEditPage() {
 
   const deleteGroupMutation = useMutation({
     mutationFn: (detailId: number) => roleDetailApi.delete(detailId),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['role-details-new', roleId] }); showToast('Permission group removed.') },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['role-details-new', roleId] })
+      if (editingRowId !== null) { setEditingRowId(null); setSelectedModuleId(null); setSelectedMenuId(null); setSelectedPermissions([]) }
+      showToast('Permission group removed.')
+    },
     onError: () => showToast('Remove failed.', 'error'),
   })
 
-  // const removePermissionMutation = useMutation({
-  //   mutationFn: async ({ roleDetailId, permissionId }: { roleDetailId: number; permissionId: number }) =>
-  //     (await axiosInstance.delete(`/role-details/${roleDetailId}/permissions/${permissionId}`)).data as RoleDetails,
-  //   onSuccess: (updated) => {
-  //     queryClient.setQueryData(['role-details-new', roleId], updated)
-  //     showToast('Permission removed.')
-  //   },
-  //   onError: () => showToast('Remove failed.', 'error'),
-  // })
   const removePermissionMutation = useMutation({
     mutationFn: async ({ roleDetailId, permissionId }: { roleDetailId: number; permissionId: number }) =>
       (await axiosInstance.delete(`/role-details/${roleDetailId}/permissions/${permissionId}`)).data,
     onSuccess: (response) => {
-      const updated = response.data as RoleDetails  // ← .data extract করো
+      const updated = response.data as RoleDetails
       queryClient.setQueryData(['role-details-new', roleId], updated)
+      queryClient.invalidateQueries({ queryKey: ['available-permissions', roleId, selectedModuleId, selectedMenuId] })
       showToast('Permission removed.')
     },
     onError: () => showToast('Remove failed.', 'error'),
   })
 
+  // ── Edit row — pre-select module+menu ──
+  const handleEditRow = (detail: AssignedPermission) => {
+    if (editingRowId === detail.id) {
+      // cancel edit
+      setEditingRowId(null); setSelectedModuleId(null); setSelectedMenuId(null); setSelectedPermissions([])
+      return
+    }
+    setEditingRowId(detail.id)
+    setSelectedModuleId(detail.moduleId)
+    setSelectedMenuId(detail.menuId)
+    setSelectedPermissions([])
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   const handleAssign = () => {
     if (!selectedModuleId) return showToast('Select a module.', 'error')
     if (!selectedMenuId) return showToast('Select a menu.', 'error')
     if (selectedPermissions.length === 0) return showToast('Select at least one permission.', 'error')
-    assignMutation.mutate({ moduleId: selectedModuleId, menuId: selectedMenuId, permissionIds: selectedPermissions })
+    const payload = { moduleId: selectedModuleId, menuId: selectedMenuId, permissionIds: selectedPermissions }
+    setPendingAssign(payload)
+    openConfirm(
+      'Add Permissions',
+      `Add ${selectedPermissions.length} permission(s) to this role?`,
+      () => assignMutation.mutate(payload),
+      false,
+      'Add'
+    )
   }
+
+  const isEditing = editingRowId !== null
 
   return (
     <div className="h-full bg-gray-50 flex flex-col">
@@ -304,9 +304,9 @@ export default function RoleEditPage() {
         title={confirmModal.title}
         message={confirmModal.message}
         danger={confirmModal.danger}
+        confirmLabel={confirmModal.confirmLabel}
         onConfirm={() => { confirmModal.onConfirm(); setConfirmModal(m => ({ ...m, open: false })) }}
-        onCancel={() => setConfirmModal(m => ({ ...m, open: false }))}
-        confirmLabel="Yes, Remove"
+        onCancel={() => { setConfirmModal(m => ({ ...m, open: false })); setPendingAssign(null) }}
       />
 
       {/* Top bar */}
@@ -347,10 +347,8 @@ export default function RoleEditPage() {
               <div className="flex items-center gap-3 mt-5">
                 <span className="text-sm font-medium text-gray-700">Is Active</span>
                 <button type="button" onClick={() => setIsActiveToggle(isActiveToggle === 1 ? 0 : 1)}
-                  className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0
-                    ${isActiveToggle === 1 ? 'bg-blue-600' : 'bg-gray-300'}`}>
-                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform
-                    ${isActiveToggle === 1 ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${isActiveToggle === 1 ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                  <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${isActiveToggle === 1 ? 'translate-x-6' : 'translate-x-0.5'}`} />
                 </button>
               </div>
               <button type="button" disabled={updateRoleMutation.isPending}
@@ -363,47 +361,52 @@ export default function RoleEditPage() {
         </div>
 
         {/* Assign permissions */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+        <div className={`bg-white border rounded-xl shadow-sm transition-all ${isEditing ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'}`}>
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-gray-100">
-            <div className="w-7 h-7 bg-violet-100 rounded-lg flex items-center justify-center">
-              <Key size={13} className="text-violet-600" />
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isEditing ? 'bg-amber-100' : 'bg-violet-100'}`}>
+              <Key size={13} className={isEditing ? 'text-amber-600' : 'text-violet-600'} />
             </div>
-            <h2 className="text-sm font-semibold text-gray-800">Assign Permissions</h2>
+            <h2 className="text-sm font-semibold text-gray-800">
+              {isEditing ? (
+                <span className="flex items-center gap-2">
+                  Editing permissions
+                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium border border-amber-200">
+                    {assignedPermissions.find(a => a.id === editingRowId)?.menuName}
+                  </span>
+                  <button onClick={() => { setEditingRowId(null); setSelectedModuleId(null); setSelectedMenuId(null); setSelectedPermissions([]) }}
+                    className="text-xs text-gray-400 hover:text-gray-600 ml-1">
+                    cancel
+                  </button>
+                </span>
+              ) : 'Assign Permissions'}
+            </h2>
           </div>
           <div className="px-5 py-4">
             <div className="flex items-end gap-3 flex-wrap">
-              {/* Module */}
               <div className="w-52">
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                  Module Name <span className="text-red-400">*</span>
-                </label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Module Name <span className="text-red-400">*</span></label>
                 <select value={selectedModuleId ?? ''}
                   onChange={e => { setSelectedModuleId(e.target.value ? Number(e.target.value) : null); setSelectedMenuId(null); setSelectedPermissions([]) }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 bg-white">
+                  disabled={isEditing}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 bg-white disabled:opacity-60 disabled:cursor-not-allowed">
                   <option value="">-- Select --</option>
                   {modules.map(m => <option key={m.id} value={m.id}>{m.moduleName}</option>)}
                 </select>
               </div>
 
-              {/* Menu */}
               <div className="w-52">
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                  Menu Name <span className="text-red-400">*</span>
-                </label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Menu Name <span className="text-red-400">*</span></label>
                 <select value={selectedMenuId ?? ''}
                   onChange={e => { setSelectedMenuId(e.target.value ? Number(e.target.value) : null); setSelectedPermissions([]) }}
-                  disabled={selectedModuleId === null}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 bg-white disabled:opacity-50 disabled:cursor-not-allowed">
+                  disabled={selectedModuleId === null || isEditing}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 bg-white disabled:opacity-60 disabled:cursor-not-allowed">
                   <option value="">-- Select --</option>
                   {leafMenus.map(m => <option key={m.id} value={m.id}>{m.menuName}</option>)}
                 </select>
               </div>
 
-              {/* Permissions */}
               <div className="flex-1 min-w-64">
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                  Permission Name <span className="text-red-400">*</span>
-                </label>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Permission Name <span className="text-red-400">*</span></label>
                 <PermissionMultiSelect
                   options={availablePermissions}
                   selected={selectedPermissions}
@@ -412,7 +415,6 @@ export default function RoleEditPage() {
                 />
               </div>
 
-              {/* Add button */}
               <button onClick={handleAssign}
                 disabled={assignMutation.isPending || selectedPermissions.length === 0 || selectedMenuId === null}
                 className="flex items-center gap-2 px-4 h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex-shrink-0">
@@ -430,9 +432,7 @@ export default function RoleEditPage() {
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-semibold text-gray-800">Permission List</h2>
               {assignedPermissions.length > 0 && (
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
-                  {assignedPermissions.length}
-                </span>
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">{assignedPermissions.length}</span>
               )}
             </div>
             <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5 w-64 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 transition-all">
@@ -440,11 +440,7 @@ export default function RoleEditPage() {
               <input type="text" placeholder="Search module, menu, permission..."
                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                 className="text-sm outline-none bg-transparent w-full text-gray-600 placeholder-gray-400" />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600">
-                  <X size={12} />
-                </button>
-              )}
+              {searchQuery && <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600"><X size={12} /></button>}
             </div>
           </div>
 
@@ -454,7 +450,7 @@ export default function RoleEditPage() {
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Module Name</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Menu Name</th>
                 <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Permission</th>
-                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-20">Action</th>
+                <th className="text-center px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide w-24">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -477,46 +473,65 @@ export default function RoleEditPage() {
                   </td>
                 </tr>
               ) : (
-                filteredAssignments.map((detail, idx) => (
-                  <tr key={detail.id} className={`border-b border-gray-50 hover:bg-gray-50/80 transition-colors ${idx % 2 === 0 ? '' : 'bg-gray-50/40'}`}>
-                    <td className="px-5 py-3.5 font-semibold text-gray-800">{detail.moduleName}</td>
-                    <td className="px-5 py-3.5 text-gray-600">{detail.menuName}</td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex flex-wrap gap-1.5">
-                        {detail.permissions.map(p => (
-                          <span key={p.id}
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getChipColor(p.permissionName)}`}>
-                            {p.permissionName}
-                            <button
-                              onClick={() => confirm(
-                                'Remove Permission',
-                                `Remove permission "${p.permissionName}" from "${detail.menuName}"?`,
-                                () => removePermissionMutation.mutate({ roleDetailId: detail.id, permissionId: p.id }),
-                                true
+                filteredAssignments.map((detail, idx) => {
+                  const isEditingThis = editingRowId === detail.id
+                  return (
+                    <tr key={detail.id}
+                      className={`border-b border-gray-50 transition-colors
+                        ${isEditingThis ? 'bg-amber-50/60' : idx % 2 === 0 ? 'hover:bg-gray-50/80' : 'bg-gray-50/40 hover:bg-gray-50/80'}`}>
+                      <td className="px-5 py-3.5 font-semibold text-gray-800">{detail.moduleName}</td>
+                      <td className="px-5 py-3.5 text-gray-600">{detail.menuName}</td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex flex-wrap gap-1.5">
+                          {detail.permissions.map(p => (
+                            <span key={p.id}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getChipColor(p.permissionName)}`}>
+                              {p.permissionName}
+                              {isEditingThis && (
+                                <button
+                                  onClick={() => openConfirm(
+                                    'Remove Permission',
+                                    `Remove "${p.permissionName}" from "${detail.menuName}"?`,
+                                    () => removePermissionMutation.mutate({ roleDetailId: detail.id, permissionId: p.id }),
+                                    true, 'Remove'
+                                  )}
+                                  className="hover:opacity-70 ml-0.5 flex-shrink-0">
+                                  <X size={10} />
+                                </button>
                               )}
-                              className="hover:opacity-70 ml-0.5 flex-shrink-0"
-                            >
-                              <X size={10} />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5 text-center">
-                      <button
-                        onClick={() => confirm(
-                          'Remove Group',
-                          `Remove all permissions under "${detail.menuName}"?`,
-                          () => deleteGroupMutation.mutate(detail.id),
-                          true
-                        )}
-                        className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors inline-flex items-center justify-center"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleEditRow(detail)}
+                            className={`p-1.5 rounded-lg transition-colors inline-flex items-center justify-center
+                              ${isEditingThis
+                                ? 'bg-amber-100 text-amber-600 hover:bg-amber-200'
+                                : 'text-gray-400 hover:text-amber-600 hover:bg-amber-50'}`}
+                            title={isEditingThis ? 'Cancel Edit' : 'Edit'}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => openConfirm(
+                              'Remove Group',
+                              `Remove all permissions under "${detail.menuName}"?`,
+                              () => deleteGroupMutation.mutate(detail.id),
+                              true, 'Remove All'
+                            )}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors inline-flex items-center justify-center"
+                            title="Delete Group"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
