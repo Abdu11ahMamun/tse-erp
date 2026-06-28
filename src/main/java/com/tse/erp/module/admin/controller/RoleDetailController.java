@@ -100,4 +100,17 @@ public class RoleDetailController {
                     roleDetailService.assignPermissions(
                             roleId, request));
         }
+    // =========================================
+    // REMOVE SINGLE PERMISSION FROM ROLE DETAIL
+    // =========================================
+        @DeleteMapping("/{roleDetailId}/permissions/{permissionId}")
+        public ResponseEntity<ApiResponse<RoleDetailResponseDto>>
+        removePermission(
+                @PathVariable Long roleDetailId,
+                @PathVariable Long permissionId) {
+
+            return ResponseEntity.ok(
+                    roleDetailService.removePermissionFromRoleDetail(
+                            roleDetailId, permissionId));
+        }
 }

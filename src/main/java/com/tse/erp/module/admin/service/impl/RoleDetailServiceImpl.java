@@ -436,4 +436,60 @@ public class RoleDetailServiceImpl implements RoleDetailService {
             return "[]";
         }
     }
+
+    // =========================================
+// REMOVE SINGLE PERMISSION FROM ROLE DETAIL
+// =========================================
+    @Override
+    @Transactional
+    public ApiResponse<RoleDetailResponseDto> removePermissionFromRoleDetail(
+            Long roleDetailId, Long permissionId) {
+
+        // 1. RoleDetail exist check
+        RoleDetail roleDetail = roleDetailRepository
+                .findById(roleDetailId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "RoleDetail not found with id: " + roleDetailId));
+
+        // 2. Current permissions parse
+        List<Long> currentPermissions =
+                parsePermissionIds(roleDetail.getPermissionId());
+
+        // 3. Permission belongs to this RoleDetail check
+        if (!currentPermissions.contains(permissionId)) {
+            throw new BadRequestException(
+                    "Permission id " + permissionId +
+                            " does not belong to this RoleDetail");
+        }
+
+        // 4. Remove selected permission
+        currentPermissions.remove(permissionId);
+
+        // 5. Last permission? → Delete entire RoleDetail
+        if (currentPermissions.isEmpty()) {
+            Long roleId = roleDetail.getRoleId();
+            roleDetailRepository.delete(roleDetail);
+
+            return ApiResponse.<RoleDetailResponseDto>builder()
+                    .success(true)
+                    .message("Permission removed successfully. " +
+                            "RoleDetail deleted as no permissions remain.")
+                    .data(getRoleWithGroupedPermissions(roleId))
+                    .build();
+        }
+
+        // 6. Update remaining permissions
+        roleDetail.setPermissionId(
+                serializePermissionIds(currentPermissions));
+        roleDetail.setUpdatedAt(LocalDateTime.now());
+        roleDetailRepository.save(roleDetail);
+
+        // 7. Return updated grouped response
+        return ApiResponse.<RoleDetailResponseDto>builder()
+                .success(true)
+                .message("Permission removed successfully.")
+                .data(getRoleWithGroupedPermissions(
+                        roleDetail.getRoleId()))
+                .build();
+    }
 }

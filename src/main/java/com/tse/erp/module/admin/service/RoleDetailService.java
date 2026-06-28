@@ -1,5 +1,6 @@
 package com.tse.erp.module.admin.service;
 
+import com.tse.erp.module.admin.dto.ApiResponse;
 import com.tse.erp.module.admin.dto.AssignPermissionRequestDto;
 import com.tse.erp.module.admin.dto.RoleDetailResponseDto;
 import com.tse.erp.module.admin.entity.RoleDetail;
@@ -16,7 +17,6 @@ public interface RoleDetailService {
     RoleDetail updateRoleDetail(Long id, RoleDetail roleDetail);
     void deleteRoleDetail(Long id);
 
-    // ✅ New methods
     RoleDetailResponseDto getRoleWithGroupedPermissions(Long roleId);
 
     List<PermissionDto> getAvailablePermissions(
@@ -24,4 +24,7 @@ public interface RoleDetailService {
 
     RoleDetailResponseDto assignPermissions(
             Long roleId, AssignPermissionRequestDto request);
+
+    ApiResponse<RoleDetailResponseDto> removePermissionFromRoleDetail(
+            Long roleDetailId, Long permissionId);
 }
