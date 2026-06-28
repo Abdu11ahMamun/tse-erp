@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.tse.erp.module.admin.dto.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -58,4 +60,44 @@ public class RoleDetailController {
         roleDetailService.deleteRoleDetail(id);
         return ResponseEntity.noContent().build();
     }
+
+        // =========================================
+    // GET ROLE WITH GROUPED PERMISSIONS
+    // =========================================
+        @GetMapping("/roles/{roleId}/details")
+        public ResponseEntity<RoleDetailResponseDto>
+        getRoleWithGroupedPermissions(
+                @PathVariable Long roleId) {
+            return ResponseEntity.ok(
+                    roleDetailService
+                            .getRoleWithGroupedPermissions(roleId));
+        }
+
+        // =========================================
+    // GET AVAILABLE PERMISSIONS
+    // =========================================
+        @GetMapping("/roles/{roleId}/available-permissions")
+        public ResponseEntity<List<PermissionDto>>
+        getAvailablePermissions(
+                @PathVariable Long roleId,
+                @RequestParam Long moduleId,
+                @RequestParam Long menuId) {
+            return ResponseEntity.ok(
+                    roleDetailService.getAvailablePermissions(
+                            roleId, moduleId, menuId));
+        }
+
+        // =========================================
+    // ASSIGN PERMISSIONS
+    // =========================================
+        @PostMapping("/roles/{roleId}/permissions")
+        public ResponseEntity<RoleDetailResponseDto>
+        assignPermissions(
+                @PathVariable Long roleId,
+                @Valid @RequestBody
+                AssignPermissionRequestDto request) {
+            return ResponseEntity.ok(
+                    roleDetailService.assignPermissions(
+                            roleId, request));
+        }
 }
