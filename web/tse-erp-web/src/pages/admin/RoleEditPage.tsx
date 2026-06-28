@@ -344,7 +344,7 @@ export default function RoleEditPage() {
                   className={`w-full border rounded-lg px-3 py-2.5 text-sm outline-none transition-colors
                     ${errors.roleName ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-50'}`} />
               </div>
-              <div className="flex items-center gap-3 mt-5">
+              <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-gray-700">Is Active</span>
                 <button type="button" onClick={() => setIsActiveToggle(isActiveToggle === 1 ? 0 : 1)}
                   className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${isActiveToggle === 1 ? 'bg-blue-600' : 'bg-gray-300'}`}>
@@ -353,7 +353,7 @@ export default function RoleEditPage() {
               </div>
               <button type="button" disabled={updateRoleMutation.isPending}
                 onClick={handleSubmit(data => updateRoleMutation.mutate({ ...data, isActive: isActiveToggle }))}
-                className="mt-5 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
                 {updateRoleMutation.isPending ? 'Saving...' : 'Save'}
               </button>
             </form>
