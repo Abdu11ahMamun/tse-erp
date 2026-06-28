@@ -4,7 +4,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { ArrowLeft, Trash2, ChevronDown, X, Search, List, Shield, Key } from 'lucide-react'
+import { ArrowLeft, Trash2, ChevronDown, X, Search, Shield, Key, Plus, ChevronRight } from 'lucide-react'
 import axiosInstance from '../../api/axiosInstance'
 import { moduleApi } from '../../api/moduleApi'
 import { menuApi } from '../../api/menuApi'
@@ -12,26 +12,25 @@ import { roleApi } from '../../api/roleApi'
 import { roleDetailApi } from '../../api/roleDetailApi'
 import type { CreateRoleRequest } from '../../types/role.types'
 
+// ── Types ────────────────────────────────────────────────────────────────────
+interface PermissionItem { id: number; permissionName: string }
 interface AssignedPermission {
-  id: number
-  moduleId: number
-  moduleName: string
-  menuId: number
-  menuName: string
-  permissions: { id: number; permissionName: string }[]
+  id: number; moduleId: number; moduleName: string
+  menuId: number; menuName: string; permissions: PermissionItem[]
+}
+interface RoleDetails { roleId: number; roleName: string; assignedPermissions: AssignedPermission[] }
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function getChipColor(name: string) {
+  const n = name.toLowerCase()
+  if (n.includes('delete') || n.includes('remove')) return 'bg-red-100 text-red-700 border-red-200'
+  if (n.includes('create') || n.includes('add')) return 'bg-green-100 text-green-700 border-green-200'
+  if (n.includes('edit') || n.includes('update')) return 'bg-amber-100 text-amber-700 border-amber-200'
+  if (n.includes('view') || n.includes('list')) return 'bg-blue-100 text-blue-700 border-blue-200'
+  return 'bg-gray-100 text-gray-600 border-gray-200'
 }
 
-interface RoleDetails {
-  roleId: number
-  roleName: string
-  assignedPermissions: AssignedPermission[]
-}
-
-interface AvailablePermission {
-  id: number
-  permissionName: string
-}
-
+// ── Toast ────────────────────────────────────────────────────────────────────
 function Toast({ message, type }: { message: string; type: 'success' | 'error' }) {
   return (
     <div className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-xl text-sm font-medium
@@ -42,16 +41,55 @@ function Toast({ message, type }: { message: string; type: 'success' | 'error' }
   )
 }
 
-function PermissionMultiSelect({
-  options, selected, onChange, disabled,
-}: {
-  options: AvailablePermission[]
-  selected: number[]
-  onChange: (ids: number[]) => void
-  disabled: boolean
+// ── Confirm Modal ─────────────────────────────────────────────────────────────
+function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmLabel = 'Confirm', danger = false }: {
+  isOpen: boolean; title: string; message: string
+  onConfirm: () => void; onCancel: () => void
+  confirmLabel?: string; danger?: boolean
+}) {
+  if (!isOpen) return null
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 z-50 p-6">
+        <h3 className="text-base font-semibold text-gray-800 mb-2">{title}</h3>
+        <p className="text-sm text-gray-500 mb-6">{message}</p>
+        <div className="flex gap-3">
+          <button onClick={onCancel}
+            className="flex-1 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 text-sm font-medium rounded-lg">
+            Cancel
+          </button>
+          <button onClick={onConfirm}
+            className={`flex-1 py-2 text-white text-sm font-semibold rounded-lg transition-colors
+              ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+function SkeletonRow() {
+  return (
+    <tr className="border-b border-gray-50">
+      <td className="px-5 py-3.5"><div className="h-4 w-28 bg-gray-100 rounded animate-pulse" /></td>
+      <td className="px-5 py-3.5"><div className="h-4 w-24 bg-gray-100 rounded animate-pulse" /></td>
+      <td className="px-5 py-3.5"><div className="flex gap-1.5"><div className="h-6 w-20 bg-gray-100 rounded-full animate-pulse" /><div className="h-6 w-16 bg-gray-100 rounded-full animate-pulse" /></div></td>
+      <td className="px-5 py-3.5"><div className="h-6 w-6 bg-gray-100 rounded animate-pulse mx-auto" /></td>
+    </tr>
+  )
+}
+
+// ── MultiSelect ───────────────────────────────────────────────────────────────
+function PermissionMultiSelect({ options, selected, onChange, disabled }: {
+  options: PermissionItem[]; selected: number[]
+  onChange: (ids: number[]) => void; disabled: boolean
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({})
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -60,6 +98,21 @@ function PermissionMultiSelect({
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  const openDropdown = () => {
+    if (disabled) return
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect()
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      })
+    }
+    setOpen(!open)
+  }
 
   const toggle = (id: number) =>
     onChange(selected.includes(id) ? selected.filter(s => s !== id) : [...selected, id])
@@ -73,46 +126,30 @@ function PermissionMultiSelect({
 
   return (
     <div ref={ref} className="relative flex-1 min-w-0">
-      <div
-        onClick={() => !disabled && setOpen(!open)}
+      <div onClick={openDropdown}
         className={`min-h-[40px] border rounded-lg px-3 py-1.5 flex flex-wrap gap-1.5 items-center cursor-pointer bg-white transition-all
           ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200' : 'border-gray-300 hover:border-blue-400'}
-          ${open ? 'border-blue-500 ring-2 ring-blue-100' : ''}`}
-      >
-        {selectedOptions.length === 0 ? (
-          <span className="text-sm text-gray-400 py-0.5">Select permissions...</span>
-        ) : (
-          selectedOptions.map(opt => (
+          ${open ? 'border-blue-500 ring-2 ring-blue-100' : ''}`}>
+        {selectedOptions.length === 0
+          ? <span className="text-sm text-gray-400 py-0.5">Select permissions...</span>
+          : selectedOptions.map(opt => (
             <span key={opt.id} className="flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-medium px-2 py-0.5 rounded-md border border-blue-200">
               {opt.permissionName}
-              <button onClick={e => remove(opt.id, e)} className="hover:text-blue-900 ml-0.5">
-                <X size={10} />
-              </button>
+              <button onClick={e => remove(opt.id, e)} className="hover:text-blue-900 ml-0.5"><X size={10} /></button>
             </span>
-          ))
-        )}
+          ))}
         <ChevronDown size={14} className={`ml-auto text-gray-400 flex-shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </div>
 
       {open && (
-        // <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-30 max-h-52 overflow-y-auto">
-        // <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-52 overflow-y-auto">
-        <div className="fixed bg-white border border-gray-200 rounded-xl shadow-xl z-[9999] max-h-52 overflow-y-auto"
-  style={{
-    width: ref.current?.getBoundingClientRect().width,
-    top: ref.current ? ref.current.getBoundingClientRect().bottom + window.scrollY + 4 : 0,
-    left: ref.current?.getBoundingClientRect().left,
-  }}
->
-          
-          {options.length === 0 ? (
-            <div className="px-4 py-4 text-sm text-gray-400 text-center">No permissions available</div>
-          ) : (
-            options.map(opt => (
+        <div style={dropdownStyle} className="bg-white border border-gray-200 rounded-xl shadow-xl max-h-52 overflow-y-auto">
+          {options.length === 0
+            ? <div className="px-4 py-4 text-sm text-gray-400 text-center">No permissions available</div>
+            : options.map(opt => (
               <label key={opt.id}
                 className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors
                   ${selected.includes(opt.id) ? 'bg-blue-50' : ''}`}>
-                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0
                   ${selected.includes(opt.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                   {selected.includes(opt.id) && (
                     <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
@@ -123,14 +160,14 @@ function PermissionMultiSelect({
                 <input type="checkbox" className="hidden" checked={selected.includes(opt.id)} onChange={() => toggle(opt.id)} />
                 <span className="text-sm text-gray-700">{opt.permissionName}</span>
               </label>
-            ))
-          )}
+            ))}
         </div>
       )}
     </div>
   )
 }
 
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function RoleEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -143,19 +180,23 @@ export default function RoleEditPage() {
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isActiveToggle, setIsActiveToggle] = useState<0 | 1>(1)
+  const [confirmModal, setConfirmModal] = useState<{
+    open: boolean; title: string; message: string; onConfirm: () => void; danger?: boolean
+  }>({ open: false, title: '', message: '', onConfirm: () => {} })
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ message: msg, type })
     setTimeout(() => setToast(null), 3000)
   }
 
+  const confirm = (title: string, message: string, onConfirm: () => void, danger = false) => {
+    setConfirmModal({ open: true, title, message, onConfirm, danger })
+  }
+
   // ── Queries ──
   const { data: roleDetails, isLoading: detailsLoading } = useQuery<RoleDetails>({
     queryKey: ['role-details-new', roleId],
-    queryFn: async () => {
-      const res = await axiosInstance.get(`/roles/${roleId}/details`)
-      return res.data
-    },
+    queryFn: async () => (await axiosInstance.get(`/roles/${roleId}/details`)).data,
     enabled: !!roleId,
   })
 
@@ -165,14 +206,9 @@ export default function RoleEditPage() {
     enabled: !!roleId,
   })
 
-  useEffect(() => {
-    if (role) setIsActiveToggle(role.isActive)
-  }, [role])
+  useEffect(() => { if (role) setIsActiveToggle(role.isActive) }, [role])
 
-  const { data: modules = [] } = useQuery({
-    queryKey: ['modules'],
-    queryFn: moduleApi.getAll,
-  })
+  const { data: modules = [] } = useQuery({ queryKey: ['modules'], queryFn: moduleApi.getAll })
 
   const { data: moduleMenus = [] } = useQuery({
     queryKey: ['menus', 'module', selectedModuleId],
@@ -180,17 +216,13 @@ export default function RoleEditPage() {
     enabled: selectedModuleId !== null,
   })
 
-  // Only show leaf menus (isParent === 0) — parent menus have no permissions
   const leafMenus = moduleMenus.filter(m => m.isParent === 0)
 
-  const { data: availablePermissions = [] } = useQuery<AvailablePermission[]>({
+  const { data: availablePermissions = [] } = useQuery<PermissionItem[]>({
     queryKey: ['available-permissions', roleId, selectedModuleId, selectedMenuId],
-    queryFn: async () => {
-      const res = await axiosInstance.get(
-        `/roles/${roleId}/available-permissions?moduleId=${selectedModuleId}&menuId=${selectedMenuId}`
-      )
-      return res.data
-    },
+    queryFn: async () => (await axiosInstance.get(
+      `/roles/${roleId}/available-permissions?moduleId=${selectedModuleId}&menuId=${selectedMenuId}`
+    )).data,
     enabled: selectedModuleId !== null && selectedMenuId !== null,
   })
 
@@ -200,45 +232,58 @@ export default function RoleEditPage() {
 
   const assignedPermissions = roleDetails?.assignedPermissions ?? []
 
+  // ── Search — filter by module, menu, permission name ──
   const filteredAssignments = useMemo(() => {
     if (!searchQuery.trim()) return assignedPermissions
     const q = searchQuery.toLowerCase()
     return assignedPermissions.filter(a =>
       a.menuName.toLowerCase().includes(q) ||
-      a.moduleName.toLowerCase().includes(q)
+      a.moduleName.toLowerCase().includes(q) ||
+      a.permissions.some(p => p.permissionName.toLowerCase().includes(q))
     )
   }, [assignedPermissions, searchQuery])
 
   // ── Mutations ──
   const updateRoleMutation = useMutation({
     mutationFn: (data: CreateRoleRequest) => roleApi.update(roleId, { ...data, id: roleId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roles'] })
-      showToast('Role updated!')
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['roles'] }); showToast('Role updated!') },
     onError: (e: any) => showToast(e?.message || 'Update failed.', 'error'),
   })
 
   const assignMutation = useMutation({
-    mutationFn: async (payload: { moduleId: number; menuId: number; permissionIds: number[] }) => {
-      const res = await axiosInstance.post(`/roles/${roleId}/permissions`, payload)
-      return res.data as RoleDetails
-    },
-    onSuccess: (updatedDetails) => {
-      queryClient.setQueryData(['role-details-new', roleId], updatedDetails)
-      setSelectedModuleId(null)
-      setSelectedMenuId(null)
-      setSelectedPermissions([])
+    mutationFn: async (payload: { moduleId: number; menuId: number; permissionIds: number[] }) =>
+      (await axiosInstance.post(`/roles/${roleId}/permissions`, payload)).data as RoleDetails,
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['role-details-new', roleId], updated)
+      queryClient.invalidateQueries({ queryKey: ['available-permissions', roleId, selectedModuleId, selectedMenuId] })
+      setSelectedModuleId(null); setSelectedMenuId(null); setSelectedPermissions([])
       showToast('Permissions assigned!')
     },
     onError: (e: any) => showToast(e?.message || 'Assign failed.', 'error'),
   })
 
-  const deleteMutation = useMutation({
+  const deleteGroupMutation = useMutation({
     mutationFn: (detailId: number) => roleDetailApi.delete(detailId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['role-details-new', roleId] })
-      showToast('Assignment removed.')
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['role-details-new', roleId] }); showToast('Permission group removed.') },
+    onError: () => showToast('Remove failed.', 'error'),
+  })
+
+  // const removePermissionMutation = useMutation({
+  //   mutationFn: async ({ roleDetailId, permissionId }: { roleDetailId: number; permissionId: number }) =>
+  //     (await axiosInstance.delete(`/role-details/${roleDetailId}/permissions/${permissionId}`)).data as RoleDetails,
+  //   onSuccess: (updated) => {
+  //     queryClient.setQueryData(['role-details-new', roleId], updated)
+  //     showToast('Permission removed.')
+  //   },
+  //   onError: () => showToast('Remove failed.', 'error'),
+  // })
+  const removePermissionMutation = useMutation({
+    mutationFn: async ({ roleDetailId, permissionId }: { roleDetailId: number; permissionId: number }) =>
+      (await axiosInstance.delete(`/role-details/${roleDetailId}/permissions/${permissionId}`)).data,
+    onSuccess: (response) => {
+      const updated = response.data as RoleDetails  // ← .data extract করো
+      queryClient.setQueryData(['role-details-new', roleId], updated)
+      showToast('Permission removed.')
     },
     onError: () => showToast('Remove failed.', 'error'),
   })
@@ -247,60 +292,42 @@ export default function RoleEditPage() {
     if (!selectedModuleId) return showToast('Select a module.', 'error')
     if (!selectedMenuId) return showToast('Select a menu.', 'error')
     if (selectedPermissions.length === 0) return showToast('Select at least one permission.', 'error')
-    assignMutation.mutate({
-      moduleId: selectedModuleId,
-      menuId: selectedMenuId,
-      permissionIds: selectedPermissions,
-    })
+    assignMutation.mutate({ moduleId: selectedModuleId, menuId: selectedMenuId, permissionIds: selectedPermissions })
   }
-
-  // DEBUG
-useEffect(() => {
-  console.log('🔵 selectedModuleId:', selectedModuleId, typeof selectedModuleId)
-  console.log('🔵 selectedMenuId:', selectedMenuId, typeof selectedMenuId)
-  console.log('🔵 enabled:', selectedModuleId !== null && selectedMenuId !== null)
-}, [selectedModuleId, selectedMenuId])
-// DEBUG
-useEffect(() => {
-  console.log('🟢 availablePermissions:', availablePermissions)
-}, [availablePermissions])
-
-// DEBUG  
-useEffect(() => {
-  console.log('🟡 moduleMenus:', moduleMenus)
-  console.log('🟡 leafMenus:', leafMenus)
-}, [moduleMenus])
 
   return (
     <div className="h-full bg-gray-50 flex flex-col">
       {toast && <Toast message={toast.message} type={toast.type} />}
 
+      <ConfirmModal
+        isOpen={confirmModal.open}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        danger={confirmModal.danger}
+        onConfirm={() => { confirmModal.onConfirm(); setConfirmModal(m => ({ ...m, open: false })) }}
+        onCancel={() => setConfirmModal(m => ({ ...m, open: false }))}
+        confirmLabel="Yes, Remove"
+      />
+
       {/* Top bar */}
       <div className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 text-sm">
           <button onClick={() => navigate('/admin/roles')}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors mr-1">
             <ArrowLeft size={16} />
           </button>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span className="hover:text-blue-600 cursor-pointer" onClick={() => navigate('/admin/roles')}>Roles</span>
-            <span>/</span>
-            <span className="font-semibold text-gray-800">{roleDetails?.roleName ?? role?.roleName ?? 'Edit'}</span>
-          </div>
+          <span className="text-gray-400 hover:text-blue-600 cursor-pointer" onClick={() => navigate('/admin/roles')}>Roles</span>
+          <ChevronRight size={13} className="text-gray-300" />
+          <span className="text-gray-400">Edit Role</span>
+          <ChevronRight size={13} className="text-gray-300" />
+          <span className="font-semibold text-gray-800">{roleDetails?.roleName ?? role?.roleName ?? '...'}</span>
         </div>
-        <button
-          onClick={() => navigate('/admin/roles')}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <List size={14} />
-          List
-        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
 
-        {/* Role info card */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
+        {/* Role info */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-gray-100">
             <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center">
               <Shield size={13} className="text-white" />
@@ -313,40 +340,30 @@ useEffect(() => {
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                   Role Name <span className="text-red-400">*</span>
                 </label>
-                <input
-                  {...register('roleName', { required: true })}
+                <input {...register('roleName', { required: true })}
                   className={`w-full border rounded-lg px-3 py-2.5 text-sm outline-none transition-colors
-                    ${errors.roleName ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-50'}`}
-                />
+                    ${errors.roleName ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-50'}`} />
               </div>
-
               <div className="flex items-center gap-3 mt-5">
                 <span className="text-sm font-medium text-gray-700">Is Active</span>
-                <button
-                  type="button"
-                  onClick={() => setIsActiveToggle(isActiveToggle === 1 ? 0 : 1)}
+                <button type="button" onClick={() => setIsActiveToggle(isActiveToggle === 1 ? 0 : 1)}
                   className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0
-                    ${isActiveToggle === 1 ? 'bg-blue-600' : 'bg-gray-300'}`}
-                >
+                    ${isActiveToggle === 1 ? 'bg-blue-600' : 'bg-gray-300'}`}>
                   <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform
                     ${isActiveToggle === 1 ? 'translate-x-6' : 'translate-x-0.5'}`} />
                 </button>
               </div>
-
-              <button
-                type="button"
+              <button type="button" disabled={updateRoleMutation.isPending}
                 onClick={handleSubmit(data => updateRoleMutation.mutate({ ...data, isActive: isActiveToggle }))}
-                disabled={updateRoleMutation.isPending}
-                className="mt-5 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
-              >
+                className="mt-5 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors">
                 {updateRoleMutation.isPending ? 'Saving...' : 'Save'}
               </button>
             </form>
           </div>
         </div>
 
-        {/* Assign permissions card */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        {/* Assign permissions */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-gray-100">
             <div className="w-7 h-7 bg-violet-100 rounded-lg flex items-center justify-center">
               <Key size={13} className="text-violet-600" />
@@ -355,21 +372,14 @@ useEffect(() => {
           </div>
           <div className="px-5 py-4">
             <div className="flex items-end gap-3 flex-wrap">
-
               {/* Module */}
               <div className="w-52">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                   Module Name <span className="text-red-400">*</span>
                 </label>
-                <select
-                  value={selectedModuleId ?? ''}
-                  onChange={e => {
-                    setSelectedModuleId(e.target.value ? Number(e.target.value) : null)
-                    setSelectedMenuId(null)
-                    setSelectedPermissions([])
-                  }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 bg-white"
-                >
+                <select value={selectedModuleId ?? ''}
+                  onChange={e => { setSelectedModuleId(e.target.value ? Number(e.target.value) : null); setSelectedMenuId(null); setSelectedPermissions([]) }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 bg-white">
                   <option value="">-- Select --</option>
                   {modules.map(m => <option key={m.id} value={m.id}>{m.moduleName}</option>)}
                 </select>
@@ -380,21 +390,16 @@ useEffect(() => {
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                   Menu Name <span className="text-red-400">*</span>
                 </label>
-                <select
-                  value={selectedMenuId ?? ''}
-                  onChange={e => {
-                    setSelectedMenuId(e.target.value ? Number(e.target.value) : null)
-                    setSelectedPermissions([])
-                  }}
+                <select value={selectedMenuId ?? ''}
+                  onChange={e => { setSelectedMenuId(e.target.value ? Number(e.target.value) : null); setSelectedPermissions([]) }}
                   disabled={selectedModuleId === null}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 bg-white disabled:opacity-50 disabled:cursor-not-allowed">
                   <option value="">-- Select --</option>
                   {leafMenus.map(m => <option key={m.id} value={m.id}>{m.menuName}</option>)}
                 </select>
               </div>
 
-              {/* Permission multi-select */}
+              {/* Permissions */}
               <div className="flex-1 min-w-64">
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
                   Permission Name <span className="text-red-400">*</span>
@@ -407,24 +412,19 @@ useEffect(() => {
                 />
               </div>
 
-  
-
               {/* Add button */}
-              <button
-                onClick={handleAssign}
+              <button onClick={handleAssign}
                 disabled={assignMutation.isPending || selectedPermissions.length === 0 || selectedMenuId === null}
-                className="w-10 h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center transition-colors flex-shrink-0 text-lg font-bold shadow-sm"
-                title="Assign"
-              >
+                className="flex items-center gap-2 px-4 h-10 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex-shrink-0">
                 {assignMutation.isPending
                   ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  : '+'}
+                  : <><Plus size={14} /> Add Permission</>}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Permission list card */}
+        {/* Permission list */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
             <div className="flex items-center gap-2">
@@ -435,15 +435,11 @@ useEffect(() => {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5 w-56 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 transition-all">
+            <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-1.5 w-64 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-50 transition-all">
               <Search size={13} className="text-gray-400 flex-shrink-0" />
-              <input
-                type="text"
-                placeholder="Search by Menu Name..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="text-sm outline-none bg-transparent w-full text-gray-600 placeholder-gray-400"
-              />
+              <input type="text" placeholder="Search module, menu, permission..."
+                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                className="text-sm outline-none bg-transparent w-full text-gray-600 placeholder-gray-400" />
               {searchQuery && (
                 <button onClick={() => setSearchQuery('')} className="text-gray-400 hover:text-gray-600">
                   <X size={12} />
@@ -463,7 +459,7 @@ useEffect(() => {
             </thead>
             <tbody>
               {detailsLoading ? (
-                <tr><td colSpan={4} className="text-center py-10 text-gray-400 text-sm">Loading...</td></tr>
+                <>{[1,2,3].map(i => <SkeletonRow key={i} />)}</>
               ) : filteredAssignments.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="text-center py-14">
@@ -472,7 +468,7 @@ useEffect(() => {
                         <Key size={22} className="text-gray-300" />
                       </div>
                       <p className="text-sm font-semibold text-gray-400">
-                        {searchQuery ? 'No results found' : 'Nothing added yet'}
+                        {searchQuery ? 'No results found' : 'No permissions assigned yet.'}
                       </p>
                       <p className="text-xs text-gray-300">
                         {searchQuery ? 'Try a different keyword' : 'Use the form above to assign permissions'}
@@ -488,15 +484,32 @@ useEffect(() => {
                     <td className="px-5 py-3.5">
                       <div className="flex flex-wrap gap-1.5">
                         {detail.permissions.map(p => (
-                          <span key={p.id} className="inline-flex items-center px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-xs font-medium">
+                          <span key={p.id}
+                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getChipColor(p.permissionName)}`}>
                             {p.permissionName}
+                            <button
+                              onClick={() => confirm(
+                                'Remove Permission',
+                                `Remove permission "${p.permissionName}" from "${detail.menuName}"?`,
+                                () => removePermissionMutation.mutate({ roleDetailId: detail.id, permissionId: p.id }),
+                                true
+                              )}
+                              className="hover:opacity-70 ml-0.5 flex-shrink-0"
+                            >
+                              <X size={10} />
+                            </button>
                           </span>
                         ))}
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <button
-                        onClick={() => { if (confirm('Remove this assignment?')) deleteMutation.mutate(detail.id) }}
+                        onClick={() => confirm(
+                          'Remove Group',
+                          `Remove all permissions under "${detail.menuName}"?`,
+                          () => deleteGroupMutation.mutate(detail.id),
+                          true
+                        )}
                         className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors inline-flex items-center justify-center"
                       >
                         <Trash2 size={15} />
