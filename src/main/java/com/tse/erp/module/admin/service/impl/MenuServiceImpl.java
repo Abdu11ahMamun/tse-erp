@@ -10,7 +10,6 @@ import com.tse.erp.module.admin.service.MenuService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -44,11 +43,22 @@ public class MenuServiceImpl implements MenuService {
     @Override
     public Menu createMenu(Menu menu) {
 
-        // Validation
+        // Required checks
         if (menu.getMenuName() == null ||
                 menu.getMenuName().trim().isEmpty()) {
             throw new BadRequestException(
                     "Menu name cannot be empty");
+        }
+
+        // Min/Max length
+        if (menu.getMenuName().trim().length() < 2) {
+            throw new BadRequestException(
+                    "Menu name must be at least 2 characters");
+        }
+
+        if (menu.getMenuName().trim().length() > 100) {
+            throw new BadRequestException(
+                    "Menu name cannot exceed 100 characters");
         }
 
         if (menu.getModuleId() == null) {
@@ -56,12 +66,42 @@ public class MenuServiceImpl implements MenuService {
                     "Module id cannot be empty");
         }
 
-        // Module exist kore kina check
+        // Route name validation (required, min 2, max 100)
+        if (menu.getRouteName() != null &&
+                !menu.getRouteName().trim().isEmpty()) {
+            if (menu.getRouteName().trim().length() < 2) {
+                throw new BadRequestException(
+                        "Route name must be at least 2 characters");
+            }
+            if (menu.getRouteName().trim().length() > 100) {
+                throw new BadRequestException(
+                        "Route name cannot exceed 100 characters");
+            }
+        }
+
+        // Sort order — must be integer >= 1
+        if (menu.getSortOrder() != null &&
+                !menu.getSortOrder().trim().isEmpty()) {
+            try {
+                int sortVal = Integer.parseInt(
+                        menu.getSortOrder().trim());
+                if (sortVal < 1) {
+                    throw new BadRequestException(
+                            "Sort order must be greater than 0");
+                }
+            } catch (NumberFormatException e) {
+                throw new BadRequestException(
+                        "Sort order must be a whole number");
+            }
+        }
+
+        // Module exist check
         moduleRepository.findById(menu.getModuleId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Module not found with id: " + menu.getModuleId()));
+                        "Module not found with id: "
+                                + menu.getModuleId()));
 
-        // Duplicate check — same module e same menu name
+        // Duplicate check — same module + same name
         boolean exists = !menuRepository
                 .findByMenuNameIgnoreCaseAndModuleId(
                         menu.getMenuName().trim(),
@@ -76,9 +116,8 @@ public class MenuServiceImpl implements MenuService {
 
         menu.setMenuName(menu.getMenuName().trim());
         menu.setIsActive(1);
-        menu.setCreatedAt(LocalDateTime.now());
-        menu.setUpdatedAt(LocalDateTime.now());
 
+        // ✅ BaseEntity @PrePersist handle korbe
         return menuRepository.save(menu);
     }
 
@@ -87,11 +126,22 @@ public class MenuServiceImpl implements MenuService {
 
         Menu existing = getMenuById(id);
 
-        // Validation
+        // Required checks
         if (menu.getMenuName() == null ||
                 menu.getMenuName().trim().isEmpty()) {
             throw new BadRequestException(
                     "Menu name cannot be empty");
+        }
+
+        // Min/Max length
+        if (menu.getMenuName().trim().length() < 2) {
+            throw new BadRequestException(
+                    "Menu name must be at least 2 characters");
+        }
+
+        if (menu.getMenuName().trim().length() > 100) {
+            throw new BadRequestException(
+                    "Menu name cannot exceed 100 characters");
         }
 
         if (menu.getModuleId() == null) {
@@ -99,10 +149,40 @@ public class MenuServiceImpl implements MenuService {
                     "Module id cannot be empty");
         }
 
-        // Module exist kore kina check
+        // Route name validation
+        if (menu.getRouteName() != null &&
+                !menu.getRouteName().trim().isEmpty()) {
+            if (menu.getRouteName().trim().length() < 2) {
+                throw new BadRequestException(
+                        "Route name must be at least 2 characters");
+            }
+            if (menu.getRouteName().trim().length() > 100) {
+                throw new BadRequestException(
+                        "Route name cannot exceed 100 characters");
+            }
+        }
+
+        // Sort order validation
+        if (menu.getSortOrder() != null &&
+                !menu.getSortOrder().trim().isEmpty()) {
+            try {
+                int sortVal = Integer.parseInt(
+                        menu.getSortOrder().trim());
+                if (sortVal < 1) {
+                    throw new BadRequestException(
+                            "Sort order must be greater than 0");
+                }
+            } catch (NumberFormatException e) {
+                throw new BadRequestException(
+                        "Sort order must be a whole number");
+            }
+        }
+
+        // Module exist check
         moduleRepository.findById(menu.getModuleId())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "Module not found with id: " + menu.getModuleId()));
+                        "Module not found with id: "
+                                + menu.getModuleId()));
 
         // Duplicate check — nijer id bade
         List<Menu> found = menuRepository
@@ -123,13 +203,13 @@ public class MenuServiceImpl implements MenuService {
         existing.setModuleId(menu.getModuleId());
         existing.setIsParent(menu.getIsParent());
         existing.setParentMenuId(menu.getParentMenuId());
-        existing.setPermissionId(menu.getPermissionId());
-        existing.setSortOrder(menu.getSortOrder());
-        existing.setRouteName(menu.getRouteName());
         existing.setIsTopMenu(menu.getIsTopMenu());
+        existing.setPermissionId(menu.getPermissionId());
+        existing.setRouteName(menu.getRouteName());
+        existing.setSortOrder(menu.getSortOrder());
         existing.setIsActive(menu.getIsActive());
-        existing.setUpdatedAt(LocalDateTime.now());
 
+        // ✅ BaseEntity @PreUpdate handle korbe
         return menuRepository.save(existing);
     }
 

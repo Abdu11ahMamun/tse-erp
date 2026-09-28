@@ -9,7 +9,6 @@ import com.tse.erp.module.admin.service.ModuleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -30,30 +29,45 @@ public class ModuleServiceImpl implements ModuleService {
                         "Module not found with id: " + id));
     }
 
-
     @Override
     public Module createModule(Module module) {
 
-        // Validation
+        // Required check
         if (module.getModuleName() == null ||
                 module.getModuleName().trim().isEmpty()) {
-            throw new BadRequestException("Module name cannot be empty");
+            throw new BadRequestException(
+                    "Module name cannot be empty");
         }
 
-        // ✅ Duplicate check — fixed
+        // Min length check
+        if (module.getModuleName().trim().length() < 2) {
+            throw new BadRequestException(
+                    "Module name must be at least 2 characters");
+        }
+
+        // Max length check
+        if (module.getModuleName().trim().length() > 100) {
+            throw new BadRequestException(
+                    "Module name cannot exceed 100 characters");
+        }
+
+        // Duplicate check
         boolean exists = !moduleRepository
-                .findByModuleNameIgnoreCase(module.getModuleName().trim())
+                .findByModuleNameIgnoreCase(
+                        module.getModuleName().trim())
                 .isEmpty();
 
         if (exists) {
             throw new DuplicateResourceException(
-                    "Module already exists with name: " + module.getModuleName());
+                    "Module already exists with name: "
+                            + module.getModuleName());
         }
 
         module.setModuleName(module.getModuleName().trim());
         module.setIsActive(1);
-        module.setCreatedAt(LocalDateTime.now());
-        module.setUpdatedAt(LocalDateTime.now());
+
+        // ✅ BaseEntity @PrePersist handle korbe
+        // createdAt/updatedAt manually set korte hobe na
 
         return moduleRepository.save(module);
     }
@@ -63,27 +77,44 @@ public class ModuleServiceImpl implements ModuleService {
 
         Module existing = getModuleById(id);
 
-        // Validation
+        // Required check
         if (module.getModuleName() == null ||
                 module.getModuleName().trim().isEmpty()) {
-            throw new BadRequestException("Module name cannot be empty");
+            throw new BadRequestException(
+                    "Module name cannot be empty");
         }
 
-        // ✅ Duplicate check — fixed
+        // Min length check
+        if (module.getModuleName().trim().length() < 2) {
+            throw new BadRequestException(
+                    "Module name must be at least 2 characters");
+        }
+
+        // Max length check
+        if (module.getModuleName().trim().length() > 100) {
+            throw new BadRequestException(
+                    "Module name cannot exceed 100 characters");
+        }
+
+        // Duplicate check — nijer id bade
         List<Module> found = moduleRepository
-                .findByModuleNameIgnoreCase(module.getModuleName().trim());
+                .findByModuleNameIgnoreCase(
+                        module.getModuleName().trim());
 
         boolean duplicateExists = found.stream()
                 .anyMatch(m -> !m.getId().equals(id));
 
         if (duplicateExists) {
             throw new DuplicateResourceException(
-                    "Module already exists with name: " + module.getModuleName());
+                    "Module already exists with name: "
+                            + module.getModuleName());
         }
 
         existing.setModuleName(module.getModuleName().trim());
         existing.setIsActive(module.getIsActive());
-        existing.setUpdatedAt(LocalDateTime.now());
+
+        // ✅ BaseEntity @PreUpdate handle korbe updatedDatetime
+        // manually set korte hobe na
 
         return moduleRepository.save(existing);
     }

@@ -3,7 +3,6 @@ package com.tse.erp.module.admin.service.impl;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
-import com.tse.erp.module.accounting.entity.AfmCoa;
 import com.tse.erp.module.admin.entity.Role;
 import com.tse.erp.module.admin.entity.RoleDetail;
 import com.tse.erp.module.admin.repository.ModuleRepository;
@@ -21,7 +20,6 @@ import com.tse.erp.module.admin.repository.MenuRepository;
 import com.tse.erp.module.admin.repository.PermissionRepository;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -43,7 +41,6 @@ public class RoleDetailServiceImpl implements RoleDetailService {
 
     @Override
     public List<RoleDetail> getRoleDetailsByRoleId(Long roleId) {
-        // Role exist kore kina check
         roleRepository.findById(roleId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Role not found with id: " + roleId));
@@ -61,7 +58,6 @@ public class RoleDetailServiceImpl implements RoleDetailService {
     @Override
     public RoleDetail createRoleDetail(RoleDetail roleDetail) {
 
-        // Validation
         if (roleDetail.getRoleId() == null) {
             throw new BadRequestException("Role id cannot be empty");
         }
@@ -80,19 +76,16 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                     "Permission id cannot be empty");
         }
 
-        // Role exist kore kina check
         roleRepository.findById(roleDetail.getRoleId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Role not found with id: "
                                 + roleDetail.getRoleId()));
 
-        // Module exist kore kina check
         moduleRepository.findById(roleDetail.getModuleId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Module not found with id: "
                                 + roleDetail.getModuleId()));
 
-        // ✅ Duplicate check — same role + module + menu
         boolean exists = !roleDetailRepository
                 .findByRoleIdAndModuleIdAndMenuId(
                         roleDetail.getRoleId(),
@@ -107,10 +100,8 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                             ", module id: " + roleDetail.getModuleId() +
                             ", menu id: " + roleDetail.getMenuId());
         }
-        roleDetail.setCreatedAt(LocalDateTime.now());
-        roleDetail.setUpdatedAt(LocalDateTime.now());
 
-
+        // ✅ BaseEntity @PrePersist handle korbe
         return roleDetailRepository.save(roleDetail);
     }
 
@@ -119,7 +110,6 @@ public class RoleDetailServiceImpl implements RoleDetailService {
 
         RoleDetail existing = getRoleDetailById(id);
 
-        // Validation
         if (roleDetail.getRoleId() == null) {
             throw new BadRequestException("Role id cannot be empty");
         }
@@ -138,19 +128,16 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                     "Permission id cannot be empty");
         }
 
-        // Role exist kore kina check
         roleRepository.findById(roleDetail.getRoleId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Role not found with id: "
                                 + roleDetail.getRoleId()));
 
-        // Module exist kore kina check
         moduleRepository.findById(roleDetail.getModuleId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Module not found with id: "
                                 + roleDetail.getModuleId()));
 
-        // Duplicate check — nijer id bade
         List<RoleDetail> found = roleDetailRepository
                 .findByRoleIdAndModuleIdAndMenuId(
                         roleDetail.getRoleId(),
@@ -172,8 +159,8 @@ public class RoleDetailServiceImpl implements RoleDetailService {
         existing.setModuleId(roleDetail.getModuleId());
         existing.setMenuId(roleDetail.getMenuId());
         existing.setPermissionId(roleDetail.getPermissionId());
-        existing.setUpdatedAt(LocalDateTime.now());
 
+        // ✅ BaseEntity @PreUpdate handle korbe
         return roleDetailRepository.save(existing);
     }
 
@@ -184,8 +171,8 @@ public class RoleDetailServiceImpl implements RoleDetailService {
     }
 
     // =========================================
-// GET ROLE WITH GROUPED PERMISSIONS
-// =========================================
+    // GET ROLE WITH GROUPED PERMISSIONS
+    // =========================================
     @Override
     public RoleDetailResponseDto getRoleWithGroupedPermissions(
             Long roleId) {
@@ -236,15 +223,13 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                 })
                 .collect(Collectors.toList());
 
-        // ✅ Calculate counts from groups — no extra DB query
         int assignedMenuCount = groups.size();
         int assignedPermissionCount = groups.stream()
                 .mapToInt(g -> g.getPermissions().size())
                 .sum();
 
-        // ✅ Format createdAt
-        String createdAt = role.getCreatedAt() != null
-                ? role.getCreatedAt().toLocalDate().toString()
+        String createdAt = role.getCreatedDatetime() != null
+                ? role.getCreatedDatetime().toLocalDate().toString()
                 : null;
 
         return RoleDetailResponseDto.builder()
@@ -259,34 +244,29 @@ public class RoleDetailServiceImpl implements RoleDetailService {
     }
 
     // =========================================
-// GET AVAILABLE PERMISSIONS
-// =========================================
+    // GET AVAILABLE PERMISSIONS
+    // =========================================
     @Override
     public List<PermissionDto> getAvailablePermissions(
             Long roleId, Long moduleId, Long menuId) {
 
-        // Role exist check
         roleRepository.findById(roleId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Role not found with id: " + roleId));
 
-        // Module exist check
         moduleRepository.findById(moduleId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Module not found with id: " + moduleId));
 
-        // Menu exist check
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Menu not found with id: " + menuId));
 
-        // ✅ Improvement 1 — Menu-Module relation check
         if (!menu.getModuleId().equals(moduleId)) {
             throw new BadRequestException(
                     "Menu does not belong to selected module");
         }
 
-        // Menu er attached permissions
         List<Long> menuPermissionIds =
                 parsePermissionIds(menu.getPermissionId());
 
@@ -294,7 +274,6 @@ public class RoleDetailServiceImpl implements RoleDetailService {
             return new ArrayList<>();
         }
 
-        // Already assigned permissions for this role
         Set<Long> assignedPermissionIds =
                 roleDetailRepository
                         .findFirstByRoleIdAndModuleIdAndMenuId(
@@ -303,7 +282,6 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                                 parsePermissionIds(rd.getPermissionId())))
                         .orElse(new HashSet<>());
 
-        // Available = menu permissions - already assigned
         return menuPermissionIds.stream()
                 .filter(pid -> !assignedPermissionIds.contains(pid))
                 .map(pid -> permissionRepository.findById(pid)
@@ -317,8 +295,8 @@ public class RoleDetailServiceImpl implements RoleDetailService {
     }
 
     // =========================================
-// ASSIGN PERMISSIONS (MERGE SAFE)
-// =========================================
+    // ASSIGN PERMISSIONS (MERGE SAFE)
+    // =========================================
     @Override
     @Transactional
     public RoleDetailResponseDto assignPermissions(
@@ -328,35 +306,29 @@ public class RoleDetailServiceImpl implements RoleDetailService {
         Long moduleId = request.getModuleId();
         Long menuId = request.getMenuId();
 
-        // 1. Role exist check
         roleRepository.findById(roleId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Role not found with id: " + roleId));
 
-        // 2. Module exist check
         moduleRepository.findById(moduleId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Module not found with id: " + moduleId));
 
-        // 3. Menu exist check
         Menu menu = menuRepository.findById(menuId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Menu not found with id: " + menuId));
 
-        // 4. Menu-Module relation check
         if (!menu.getModuleId().equals(moduleId)) {
             throw new BadRequestException(
                     "Menu does not belong to selected module");
         }
 
-        // 5. Permission list empty check
         if (request.getPermissionIds() == null ||
                 request.getPermissionIds().isEmpty()) {
             throw new BadRequestException(
                     "Permission list cannot be empty");
         }
 
-        // 6. Validate each permissionId belongs to menu
         List<Long> menuPermissionIds =
                 parsePermissionIds(menu.getPermissionId());
 
@@ -371,39 +343,33 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                             " do not belong to this menu");
         }
 
-        // 7. Get existing role detail for this role+module+menu
         Optional<RoleDetail> existingOpt =
                 roleDetailRepository
                         .findFirstByRoleIdAndModuleIdAndMenuId(
                                 roleId, moduleId, menuId);
 
         if (existingOpt.isPresent()) {
-            // ── MERGE — already assigned ignore, new ones add ──
             RoleDetail existing = existingOpt.get();
             List<Long> currentIds =
                     parsePermissionIds(existing.getPermissionId());
 
-            // New permissions only (ignore already assigned)
             List<Long> newIds = request.getPermissionIds()
                     .stream()
                     .filter(pid -> !currentIds.contains(pid))
                     .collect(Collectors.toList());
 
-            // Merge
             currentIds.addAll(newIds);
 
-            // Remove duplicates
             List<Long> mergedIds = currentIds.stream()
                     .distinct()
                     .collect(Collectors.toList());
 
             existing.setPermissionId(
                     serializePermissionIds(mergedIds));
-            existing.setUpdatedAt(LocalDateTime.now());
+            // ✅ BaseEntity @PreUpdate handle korbe
             roleDetailRepository.save(existing);
 
         } else {
-            // ── NEW ROW ──
             List<Long> distinctIds = request.getPermissionIds()
                     .stream()
                     .distinct()
@@ -414,20 +380,18 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                     .moduleId(moduleId)
                     .menuId(menuId)
                     .permissionId(serializePermissionIds(distinctIds))
-                    .createdAt(LocalDateTime.now())
-                    .updatedAt(LocalDateTime.now())
                     .build();
 
+            // ✅ BaseEntity @PrePersist handle korbe
             roleDetailRepository.save(newDetail);
         }
 
-        // ── Return grouped response ──
         return getRoleWithGroupedPermissions(roleId);
     }
 
     // =========================================
-// HELPER METHODS
-// =========================================
+    // HELPER METHODS
+    // =========================================
     private List<Long> parsePermissionIds(String json) {
         if (json == null || json.trim().isEmpty()
                 || json.equals("[]")) {
@@ -450,34 +414,31 @@ public class RoleDetailServiceImpl implements RoleDetailService {
     }
 
     // =========================================
-// REMOVE SINGLE PERMISSION FROM ROLE DETAIL
-// =========================================
+    // REMOVE SINGLE PERMISSION FROM ROLE DETAIL
+    // =========================================
     @Override
     @Transactional
-    public ApiResponse<RoleDetailResponseDto> removePermissionFromRoleDetail(
+    public ApiResponse<RoleDetailResponseDto>
+    removePermissionFromRoleDetail(
             Long roleDetailId, Long permissionId) {
 
-        // 1. RoleDetail exist check
         RoleDetail roleDetail = roleDetailRepository
                 .findById(roleDetailId)
                 .orElseThrow(() -> new ResourceNotFoundException(
-                        "RoleDetail not found with id: " + roleDetailId));
+                        "RoleDetail not found with id: "
+                                + roleDetailId));
 
-        // 2. Current permissions parse
         List<Long> currentPermissions =
                 parsePermissionIds(roleDetail.getPermissionId());
 
-        // 3. Permission belongs to this RoleDetail check
         if (!currentPermissions.contains(permissionId)) {
             throw new BadRequestException(
                     "Permission id " + permissionId +
                             " does not belong to this RoleDetail");
         }
 
-        // 4. Remove selected permission
         currentPermissions.remove(permissionId);
 
-        // 5. Last permission? → Delete entire RoleDetail
         if (currentPermissions.isEmpty()) {
             Long roleId = roleDetail.getRoleId();
             roleDetailRepository.delete(roleDetail);
@@ -490,13 +451,11 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                     .build();
         }
 
-        // 6. Update remaining permissions
         roleDetail.setPermissionId(
                 serializePermissionIds(currentPermissions));
-        roleDetail.setUpdatedAt(LocalDateTime.now());
+        // ✅ BaseEntity @PreUpdate handle korbe
         roleDetailRepository.save(roleDetail);
 
-        // 7. Return updated grouped response
         return ApiResponse.<RoleDetailResponseDto>builder()
                 .success(true)
                 .message("Permission removed successfully.")

@@ -5,21 +5,21 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "modules")
+@Table(name = "admin_bg")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Module extends BaseEntity {
+public class BusinessGroup extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "module_name", length = 100, nullable = false, unique = true)
-    private String moduleName;
+    @Column(name = "group_name")
+    private String groupName;
 
-    @Column(name = "is_active", columnDefinition = "BIT")
-    private Integer isActive;
+    @Column(name = "bg_logo")
+    private String bgLogo;
 }

@@ -9,7 +9,6 @@ import com.tse.erp.module.admin.service.RoleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -33,27 +32,40 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public Role createRole(Role role) {
 
-        // Validation
+        // Required check
         if (role.getRoleName() == null ||
                 role.getRoleName().trim().isEmpty()) {
             throw new BadRequestException(
                     "Role name cannot be empty");
         }
 
+        // Min length
+        if (role.getRoleName().trim().length() < 2) {
+            throw new BadRequestException(
+                    "Role name must be at least 2 characters");
+        }
+
+        // Max length
+        if (role.getRoleName().trim().length() > 100) {
+            throw new BadRequestException(
+                    "Role name cannot exceed 100 characters");
+        }
+
+        // Duplicate check
         boolean exists = !roleRepository
                 .findByRoleNameIgnoreCase(role.getRoleName().trim())
                 .isEmpty();
 
         if (exists) {
             throw new DuplicateResourceException(
-                    "Role already exists with name: " + role.getRoleName());
+                    "Role already exists with name: "
+                            + role.getRoleName());
         }
 
         role.setRoleName(role.getRoleName().trim());
         role.setIsActive(1);
-        role.setCreatedAt(LocalDateTime.now());
-        role.setUpdatedAt(LocalDateTime.now());
 
+        // ✅ BaseEntity @PrePersist handle korbe
         return roleRepository.save(role);
     }
 
@@ -62,13 +74,26 @@ public class RoleServiceImpl implements RoleService {
 
         Role existing = getRoleById(id);
 
-        // Validation
+        // Required check
         if (role.getRoleName() == null ||
                 role.getRoleName().trim().isEmpty()) {
             throw new BadRequestException(
                     "Role name cannot be empty");
         }
 
+        // Min length
+        if (role.getRoleName().trim().length() < 2) {
+            throw new BadRequestException(
+                    "Role name must be at least 2 characters");
+        }
+
+        // Max length
+        if (role.getRoleName().trim().length() > 100) {
+            throw new BadRequestException(
+                    "Role name cannot exceed 100 characters");
+        }
+
+        // Duplicate check — nijer id bade
         List<Role> found = roleRepository
                 .findByRoleNameIgnoreCase(role.getRoleName().trim());
 
@@ -77,15 +102,17 @@ public class RoleServiceImpl implements RoleService {
 
         if (duplicateExists) {
             throw new DuplicateResourceException(
-                    "Role already exists with name: " + role.getRoleName());
+                    "Role already exists with name: "
+                            + role.getRoleName());
         }
 
         existing.setRoleName(role.getRoleName().trim());
         existing.setIsActive(role.getIsActive());
-        existing.setUpdatedAt(LocalDateTime.now());
 
+        // ✅ BaseEntity @PreUpdate handle korbe
         return roleRepository.save(existing);
     }
+
     @Override
     public void deleteRole(Long id) {
         Role existing = getRoleById(id);

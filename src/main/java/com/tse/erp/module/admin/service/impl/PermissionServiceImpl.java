@@ -3,7 +3,6 @@ package com.tse.erp.module.admin.service.impl;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
-import com.tse.erp.module.accounting.entity.AfmCoa;
 import com.tse.erp.module.admin.entity.Permission;
 import com.tse.erp.module.admin.repository.ModuleRepository;
 import com.tse.erp.module.admin.repository.PermissionRepository;
@@ -11,7 +10,6 @@ import com.tse.erp.module.admin.service.PermissionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -28,7 +26,6 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Override
     public List<Permission> getPermissionsByModuleId(Long moduleId) {
-        // Module exist kore kina check
         moduleRepository.findById(moduleId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Module not found with id: " + moduleId));
@@ -46,11 +43,23 @@ public class PermissionServiceImpl implements PermissionService {
     @Override
     public Permission createPermission(Permission permission) {
 
-        // Validation
+        // Required check
         if (permission.getPermissionName() == null ||
                 permission.getPermissionName().trim().isEmpty()) {
             throw new BadRequestException(
                     "Permission name cannot be empty");
+        }
+
+        // Min length
+        if (permission.getPermissionName().trim().length() < 2) {
+            throw new BadRequestException(
+                    "Permission name must be at least 2 characters");
+        }
+
+        // Max length
+        if (permission.getPermissionName().trim().length() > 100) {
+            throw new BadRequestException(
+                    "Permission name cannot exceed 100 characters");
         }
 
         if (permission.getModuleId() == null) {
@@ -58,13 +67,13 @@ public class PermissionServiceImpl implements PermissionService {
                     "Module id cannot be empty");
         }
 
-        // Module exist kore kina check
+        // Module exist check
         moduleRepository.findById(permission.getModuleId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Module not found with id: "
                                 + permission.getModuleId()));
 
-        // Duplicate check — same module e same permission name
+        // Duplicate check — same module + same name
         boolean exists = !permissionRepository
                 .findByPermissionNameIgnoreCaseAndModuleId(
                         permission.getPermissionName().trim(),
@@ -77,23 +86,37 @@ public class PermissionServiceImpl implements PermissionService {
                             + "' already exists in this module");
         }
 
-        permission.setPermissionName(permission.getPermissionName().trim());
+        permission.setPermissionName(
+                permission.getPermissionName().trim());
         permission.setIsActive(1);
-        permission.setCreatedAt(LocalDateTime.now());
-        permission.setUpdatedAt(LocalDateTime.now());
+
+        // ✅ BaseEntity @PrePersist handle korbe
         return permissionRepository.save(permission);
     }
 
     @Override
-    public Permission updatePermission(Long id, Permission permission) {
+    public Permission updatePermission(Long id,
+                                       Permission permission) {
 
         Permission existing = getPermissionById(id);
 
-        // Validation
+        // Required check
         if (permission.getPermissionName() == null ||
                 permission.getPermissionName().trim().isEmpty()) {
             throw new BadRequestException(
                     "Permission name cannot be empty");
+        }
+
+        // Min length
+        if (permission.getPermissionName().trim().length() < 2) {
+            throw new BadRequestException(
+                    "Permission name must be at least 2 characters");
+        }
+
+        // Max length
+        if (permission.getPermissionName().trim().length() > 100) {
+            throw new BadRequestException(
+                    "Permission name cannot exceed 100 characters");
         }
 
         if (permission.getModuleId() == null) {
@@ -101,7 +124,7 @@ public class PermissionServiceImpl implements PermissionService {
                     "Module id cannot be empty");
         }
 
-        // Module exist kore kina check
+        // Module exist check
         moduleRepository.findById(permission.getModuleId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Module not found with id: "
@@ -122,10 +145,12 @@ public class PermissionServiceImpl implements PermissionService {
                             + "' already exists in this module");
         }
 
-        existing.setPermissionName(permission.getPermissionName().trim());
+        existing.setPermissionName(
+                permission.getPermissionName().trim());
         existing.setModuleId(permission.getModuleId());
         existing.setIsActive(permission.getIsActive());
-        existing.setUpdatedAt(LocalDateTime.now());
+
+        // ✅ BaseEntity @PreUpdate handle korbe
         return permissionRepository.save(existing);
     }
 

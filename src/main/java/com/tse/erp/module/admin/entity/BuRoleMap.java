@@ -5,21 +5,21 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "modules")
+@Table(name = "admin_bu_role_map")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Module extends BaseEntity {
+public class BuRoleMap extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "module_name", length = 100, nullable = false, unique = true)
-    private String moduleName;
+    @Column(name = "role_id", nullable = false)
+    private Long roleId;
 
-    @Column(name = "is_active", columnDefinition = "BIT")
-    private Integer isActive;
+    @Column(name = "bu_id", nullable = false)
+    private Long buId;
 }
