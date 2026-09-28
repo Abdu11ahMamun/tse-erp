@@ -32,17 +32,15 @@ public class SecurityConfig {
             HttpSecurity http) throws Exception {
 
         http
-                // ✅ CORS config add koro
                 .cors(cors -> cors.configurationSource(
                         request -> {
                             var config = new org.springframework.web.cors
                                     .CorsConfiguration();
                             config.setAllowedOrigins(
-                                      java.util.List.of(
-                                                        "http://localhost:5173",        // local dev
-                                                        "http://160.25.226.138"        // production UI (jodi same server)
-                                                      //  "http://YOUR_FRONTEND_DOMAIN"   // frontend er actual domain
-                                                ));
+                                    java.util.List.of(
+                                            "http://localhost:5173",
+                                            "http://160.25.226.138"
+                                    ));
                             config.setAllowedMethods(
                                     java.util.List.of(
                                             "GET","POST","PUT",
@@ -57,8 +55,13 @@ public class SecurityConfig {
                         .sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**")
-                        .permitAll()
+                        .requestMatchers(
+                                "/api/v1/auth/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**",
+                                "/v3/api-docs.yaml"
+                        ).permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(
                         jwtAuthFilter,
