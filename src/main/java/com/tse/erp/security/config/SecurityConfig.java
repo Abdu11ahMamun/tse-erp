@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -36,10 +37,11 @@ public class SecurityConfig {
                         request -> {
                             var config = new org.springframework.web.cors
                                     .CorsConfiguration();
-                            config.setAllowedOrigins(
+                            config.setAllowedOriginPatterns(
                                     java.util.List.of(
                                             "http://localhost:5173",
-                                            "http://160.25.226.138"
+                                            "https://*.netlify.app",
+                                            "https://tse.unsaidscript.com"
                                     ));
                             config.setAllowedMethods(
                                     java.util.List.of(
@@ -55,6 +57,7 @@ public class SecurityConfig {
                         .sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/**",
                                 "/swagger-ui/**",
