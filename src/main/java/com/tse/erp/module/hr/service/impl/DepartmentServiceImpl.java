@@ -6,6 +6,7 @@ import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.asset.repository.AssetGroupRepository;
+import com.tse.erp.module.asset.repository.AssetLocationRepository;
 import com.tse.erp.module.hr.entity.Department;
 import com.tse.erp.module.hr.repository.DepartmentGroupRepository;
 import com.tse.erp.module.hr.repository.DepartmentRepository;
@@ -23,6 +24,7 @@ public class DepartmentServiceImpl implements DepartmentService {
     private final BusinessGroupRepository businessGroupRepository;
     private final AssetGroupRepository assetGroupRepository;
     private final DepartmentGroupRepository departmentGroupRepository;
+    private final AssetLocationRepository assetLocationRepository;
 
     @Override
     public List<Department> getAllDepartments(Long bgId) {
@@ -135,6 +137,11 @@ public class DepartmentServiceImpl implements DepartmentService {
         if (departmentGroupRepository.existsByDeptId(id)) {
             throw new BadRequestException(
                     "Cannot delete: Department is mapped to Business Unit(s)");
+        }
+
+        if (assetLocationRepository.existsByDeptId(id)) {
+            throw new BadRequestException(
+                    "Cannot delete: Asset Locations use this Department");
         }
 
         departmentRepository.delete(existing);
