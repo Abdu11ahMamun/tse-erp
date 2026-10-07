@@ -16,4 +16,6 @@ public interface AssetGroupRepository
 
     List<AssetGroup> findByBuIdAndAssetGroupIgnoreCaseAndAssetOwnerId(
             Long buId, String assetGroup, Long assetOwnerId);
+
+    boolean existsByAssetOwnerId(Long assetOwnerId);
 }

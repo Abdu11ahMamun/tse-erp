@@ -10,6 +10,8 @@ import com.tse.erp.module.admin.repository.BusinessUnitRepository;
 import com.tse.erp.module.asset.entity.AssetGroup;
 import com.tse.erp.module.asset.repository.AssetGroupRepository;
 import com.tse.erp.module.asset.service.AssetGroupService;
+import com.tse.erp.module.hr.entity.Department;
+import com.tse.erp.module.hr.repository.DepartmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +24,7 @@ public class AssetGroupServiceImpl implements AssetGroupService {
     private final AssetGroupRepository assetGroupRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
+    private final DepartmentRepository departmentRepository;
 
     @Override
     public List<AssetGroup> getAllAssetGroups(Long buId) {
@@ -42,7 +45,7 @@ public class AssetGroupServiceImpl implements AssetGroupService {
     public AssetGroup createAssetGroup(AssetGroup assetGroup) {
         validateParents(assetGroup.getBgId(), assetGroup.getBuId());
         validateAssetGroupName(assetGroup.getAssetGroup());
-        validateOwner(assetGroup.getAssetOwnerId(), assetGroup.getBuId());
+        validateOwner(assetGroup.getAssetOwnerId(), assetGroup.getBgId());
         StatusUtil.validate(assetGroup.getStatus());
 
         String name = assetGroup.getAssetGroup().trim();
@@ -68,7 +71,7 @@ public class AssetGroupServiceImpl implements AssetGroupService {
 
         validateParents(assetGroup.getBgId(), assetGroup.getBuId());
         validateAssetGroupName(assetGroup.getAssetGroup());
-        validateOwner(assetGroup.getAssetOwnerId(), assetGroup.getBuId());
+        validateOwner(assetGroup.getAssetOwnerId(), assetGroup.getBgId());
         StatusUtil.validate(assetGroup.getStatus());
 
         String name = assetGroup.getAssetGroup().trim();
@@ -138,9 +141,24 @@ public class AssetGroupServiceImpl implements AssetGroupService {
         }
     }
 
-    private void validateOwner(Long ownerId, Long buId) {
+    private void validateOwner(Long ownerId, Long bgId) {
         if (ownerId == null) {
-            throw new BadRequestException("Asset owner cannot be empty");
+            throw new BadRequestException(
+                    "Asset owner cannot be empty");
+        }
+
+        Department dept = departmentRepository.findById(ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Department not found with id: " + ownerId));
+
+        if (!Integer.valueOf(1).equals(dept.getStatus())) {
+            throw new BadRequestException(
+                    "Selected Department is not active");
+        }
+
+        if (!bgId.equals(dept.getBgId())) {
+            throw new BadRequestException(
+                    "Department does not belong to selected Business Group");
         }
     }
 }
