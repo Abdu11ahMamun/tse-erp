@@ -8,6 +8,7 @@ import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
 import com.tse.erp.module.asset.entity.AssetGroup;
+import com.tse.erp.module.asset.repository.AssetItemRepository;
 import com.tse.erp.module.asset.repository.AssetGroupRepository;
 import com.tse.erp.module.asset.service.AssetGroupService;
 import com.tse.erp.module.hr.entity.Department;
@@ -22,6 +23,7 @@ import java.util.List;
 public class AssetGroupServiceImpl implements AssetGroupService {
 
     private final AssetGroupRepository assetGroupRepository;
+    private final AssetItemRepository assetItemRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
     private final DepartmentRepository departmentRepository;
@@ -100,6 +102,10 @@ public class AssetGroupServiceImpl implements AssetGroupService {
     @Override
     public void deleteAssetGroup(Long id) {
         AssetGroup existing = getAssetGroupById(id);
+        if (assetItemRepository.existsByItemGroupId(id)) {
+            throw new BadRequestException(
+                    "Cannot delete: Asset Items exist under this Asset Group");
+        }
         assetGroupRepository.delete(existing);
     }
 

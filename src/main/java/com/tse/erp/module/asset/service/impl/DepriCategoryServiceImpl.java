@@ -8,6 +8,7 @@ import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
 import com.tse.erp.module.asset.entity.DepriCategory;
+import com.tse.erp.module.asset.repository.AssetItemRepository;
 import com.tse.erp.module.asset.repository.DepriCategoryRepository;
 import com.tse.erp.module.asset.service.DepriCategoryService;
 import com.tse.erp.module.common.entity.LookupValue;
@@ -26,6 +27,7 @@ import java.util.List;
 public class DepriCategoryServiceImpl implements DepriCategoryService {
 
     private final DepriCategoryRepository depriCategoryRepository;
+    private final AssetItemRepository assetItemRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
     private final LookupValueRepository lookupValueRepository;
@@ -121,6 +123,10 @@ public class DepriCategoryServiceImpl implements DepriCategoryService {
     @Override
     public void deleteDepriCategory(Long id) {
         DepriCategory existing = getDepriCategoryById(id);
+        if (assetItemRepository.existsByAssetDepriCatId(id)) {
+            throw new BadRequestException(
+                    "Cannot delete: Asset Items use this Depreciation Category");
+        }
         depriCategoryRepository.delete(existing);
     }
 

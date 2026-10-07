@@ -8,6 +8,7 @@ import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
 import com.tse.erp.module.asset.entity.AssetUom;
+import com.tse.erp.module.asset.repository.AssetItemRepository;
 import com.tse.erp.module.asset.repository.AssetUomRepository;
 import com.tse.erp.module.asset.service.AssetUomService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.List;
 public class AssetUomServiceImpl implements AssetUomService {
 
     private final AssetUomRepository assetUomRepository;
+    private final AssetItemRepository assetItemRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
 
@@ -94,6 +96,10 @@ public class AssetUomServiceImpl implements AssetUomService {
     @Override
     public void deleteAssetUom(Long id) {
         AssetUom existing = getAssetUomById(id);
+        if (assetItemRepository.existsByUomId(id)) {
+            throw new BadRequestException(
+                    "Cannot delete: Asset Items use this UOM");
+        }
         assetUomRepository.delete(existing);
     }
 
