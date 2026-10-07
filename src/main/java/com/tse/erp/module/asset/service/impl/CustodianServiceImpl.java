@@ -75,14 +75,18 @@ public class CustodianServiceImpl implements CustodianService {
         Custodian saved = custodianRepository.save(custodian);
 
         if (request.getSubCustodians() != null) {
-            List<CustodianDtl> details = request.getSubCustodians().stream()
-                    .map(row -> CustodianDtl.builder()
-                            .custodianId(saved.getId())
-                            .subCustodianName(
-                                    row.getSubCustodianName().trim())
-                            .status(row.getStatus())
-                            .build())
-                    .toList();
+            List<CustodianDtl> details = new ArrayList<>();
+            for (SubCustodianDto row : request.getSubCustodians()) {
+                CustodianDtl detail = CustodianDtl.builder()
+                        .custodianId(saved.getId())
+                        .subCustodianName(
+                                row.getSubCustodianName().trim())
+                        .build();
+                if (row.getStatus() != null) {
+                    detail.setStatus(row.getStatus());
+                }
+                details.add(detail);
+            }
             custodianDtlRepository.saveAll(details);
         }
 
@@ -145,12 +149,15 @@ public class CustodianServiceImpl implements CustodianService {
                 }
                 handled.add(row.getId());
             } else {
-                newRows.add(CustodianDtl.builder()
+                CustodianDtl newRow = CustodianDtl.builder()
                         .custodianId(id)
                         .subCustodianName(
                                 row.getSubCustodianName().trim())
-                        .status(row.getStatus())
-                        .build());
+                        .build();
+                if (row.getStatus() != null) {
+                    newRow.setStatus(row.getStatus());
+                }
+                newRows.add(newRow);
             }
         }
 
