@@ -7,6 +7,7 @@ import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.asset.repository.AssetGroupRepository;
 import com.tse.erp.module.hr.entity.Department;
+import com.tse.erp.module.hr.repository.DepartmentGroupRepository;
 import com.tse.erp.module.hr.repository.DepartmentRepository;
 import com.tse.erp.module.hr.service.DepartmentService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class DepartmentServiceImpl implements DepartmentService {
     private final DepartmentRepository departmentRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final AssetGroupRepository assetGroupRepository;
+    private final DepartmentGroupRepository departmentGroupRepository;
 
     @Override
     public List<Department> getAllDepartments(Long bgId) {
@@ -128,6 +130,11 @@ public class DepartmentServiceImpl implements DepartmentService {
         if (assetGroupRepository.existsByAssetOwnerId(id)) {
             throw new BadRequestException(
                     "Cannot delete: Asset Groups use this Department as owner");
+        }
+
+        if (departmentGroupRepository.existsByDeptId(id)) {
+            throw new BadRequestException(
+                    "Cannot delete: Department is mapped to Business Unit(s)");
         }
 
         departmentRepository.delete(existing);
