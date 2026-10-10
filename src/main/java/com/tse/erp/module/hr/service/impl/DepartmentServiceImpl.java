@@ -9,6 +9,7 @@ import com.tse.erp.module.asset.repository.AssetGroupRepository;
 import com.tse.erp.module.asset.repository.AssetLocationRepository;
 import com.tse.erp.module.hr.entity.Department;
 import com.tse.erp.module.hr.repository.DepartmentGroupRepository;
+import com.tse.erp.module.hr.repository.DeptDesigMapRepository;
 import com.tse.erp.module.hr.repository.DepartmentRepository;
 import com.tse.erp.module.hr.service.DepartmentService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class DepartmentServiceImpl implements DepartmentService {
     private final BusinessGroupRepository businessGroupRepository;
     private final AssetGroupRepository assetGroupRepository;
     private final DepartmentGroupRepository departmentGroupRepository;
+    private final DeptDesigMapRepository deptDesigMapRepository;
     private final AssetLocationRepository assetLocationRepository;
 
     @Override
@@ -137,6 +139,11 @@ public class DepartmentServiceImpl implements DepartmentService {
         if (departmentGroupRepository.existsByDeptId(id)) {
             throw new BadRequestException(
                     "Cannot delete: Department is mapped to Business Unit(s)");
+        }
+
+        if (deptDesigMapRepository.existsByDeptId(id)) {
+            throw new BadRequestException(
+                    "Cannot delete: Department is used in Designation Mapping");
         }
 
         if (assetLocationRepository.existsByDeptId(id)) {
