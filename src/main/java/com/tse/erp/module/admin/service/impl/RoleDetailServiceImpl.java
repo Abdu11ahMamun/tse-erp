@@ -101,7 +101,7 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                             ", menu id: " + roleDetail.getMenuId());
         }
 
-        // ✅ BaseEntity @PrePersist handle korbe
+        // BaseEntity @PrePersist handle korbe
         return roleDetailRepository.save(roleDetail);
     }
 
@@ -160,7 +160,7 @@ public class RoleDetailServiceImpl implements RoleDetailService {
         existing.setMenuId(roleDetail.getMenuId());
         existing.setPermissionId(roleDetail.getPermissionId());
 
-        // ✅ BaseEntity @PreUpdate handle korbe
+        // BaseEntity @PreUpdate handle korbe
         return roleDetailRepository.save(existing);
     }
 
@@ -235,7 +235,7 @@ public class RoleDetailServiceImpl implements RoleDetailService {
         return RoleDetailResponseDto.builder()
                 .roleId(role.getId())
                 .roleName(role.getRoleName())
-                .status(role.getIsActive() == 1)
+                .status(Integer.valueOf(1).equals(role.getStatus()))
                 .createdAt(createdAt)
                 .assignedMenuCount(assignedMenuCount)
                 .assignedPermissionCount(assignedPermissionCount)
@@ -266,6 +266,8 @@ public class RoleDetailServiceImpl implements RoleDetailService {
             throw new BadRequestException(
                     "Menu does not belong to selected module");
         }
+
+        validateAssignableMenu(menu);
 
         List<Long> menuPermissionIds =
                 parsePermissionIds(menu.getPermissionId());
@@ -323,6 +325,8 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                     "Menu does not belong to selected module");
         }
 
+        validateAssignableMenu(menu);
+
         if (request.getPermissionIds() == null ||
                 request.getPermissionIds().isEmpty()) {
             throw new BadRequestException(
@@ -366,7 +370,7 @@ public class RoleDetailServiceImpl implements RoleDetailService {
 
             existing.setPermissionId(
                     serializePermissionIds(mergedIds));
-            // ✅ BaseEntity @PreUpdate handle korbe
+            // BaseEntity @PreUpdate handle korbe
             roleDetailRepository.save(existing);
 
         } else {
@@ -375,14 +379,14 @@ public class RoleDetailServiceImpl implements RoleDetailService {
                     .distinct()
                     .collect(Collectors.toList());
 
-            RoleDetail newDetail = RoleDetail.builder()
-                    .roleId(roleId)
-                    .moduleId(moduleId)
-                    .menuId(menuId)
-                    .permissionId(serializePermissionIds(distinctIds))
-                    .build();
+            // Setter use kora hocche (builder BaseEntity-r status set korte pare na)
+            RoleDetail newDetail = new RoleDetail();
+            newDetail.setRoleId(roleId);
+            newDetail.setModuleId(moduleId);
+            newDetail.setMenuId(menuId);
+            newDetail.setPermissionId(serializePermissionIds(distinctIds));
 
-            // ✅ BaseEntity @PrePersist handle korbe
+            // BaseEntity @PrePersist handle korbe
             roleDetailRepository.save(newDetail);
         }
 
@@ -392,6 +396,18 @@ public class RoleDetailServiceImpl implements RoleDetailService {
     // =========================================
     // HELPER METHODS
     // =========================================
+    // Spec: Role-e shudhu oi menu assign hobe jeta parent na ar top menu na
+    private void validateAssignableMenu(Menu menu) {
+        if (Integer.valueOf(1).equals(menu.getIsParent())) {
+            throw new BadRequestException(
+                    "Parent menu cannot be assigned to a role");
+        }
+        if (Integer.valueOf(1).equals(menu.getIsTopMenu())) {
+            throw new BadRequestException(
+                    "Top menu cannot be assigned to a role");
+        }
+    }
+
     private List<Long> parsePermissionIds(String json) {
         if (json == null || json.trim().isEmpty()
                 || json.equals("[]")) {
@@ -453,7 +469,7 @@ public class RoleDetailServiceImpl implements RoleDetailService {
 
         roleDetail.setPermissionId(
                 serializePermissionIds(currentPermissions));
-        // ✅ BaseEntity @PreUpdate handle korbe
+        // BaseEntity @PreUpdate handle korbe
         roleDetailRepository.save(roleDetail);
 
         return ApiResponse.<RoleDetailResponseDto>builder()

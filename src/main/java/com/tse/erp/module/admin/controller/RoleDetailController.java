@@ -14,7 +14,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/role-details")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class RoleDetailController {
 
     private final RoleDetailService roleDetailService;
@@ -61,56 +60,52 @@ public class RoleDetailController {
         return ResponseEntity.noContent().build();
     }
 
-        // =========================================
+    // =========================================
     // GET ROLE WITH GROUPED PERMISSIONS
     // =========================================
-        @GetMapping("/roles/{roleId}/details")
-        public ResponseEntity<RoleDetailResponseDto>
-        getRoleWithGroupedPermissions(
-                @PathVariable Long roleId) {
-            return ResponseEntity.ok(
-                    roleDetailService
-                            .getRoleWithGroupedPermissions(roleId));
-        }
+    @GetMapping("/roles/{roleId}/details")
+    public ResponseEntity<RoleDetailResponseDto>
+    getRoleWithGroupedPermissions(@PathVariable Long roleId) {
+        return ResponseEntity.ok(
+                roleDetailService.getRoleWithGroupedPermissions(roleId));
+    }
 
-        // =========================================
+    // =========================================
     // GET AVAILABLE PERMISSIONS
     // =========================================
-        @GetMapping("/roles/{roleId}/available-permissions")
-        public ResponseEntity<List<PermissionDto>>
-        getAvailablePermissions(
-                @PathVariable Long roleId,
-                @RequestParam Long moduleId,
-                @RequestParam Long menuId) {
-            return ResponseEntity.ok(
-                    roleDetailService.getAvailablePermissions(
-                            roleId, moduleId, menuId));
-        }
+    @GetMapping("/roles/{roleId}/available-permissions")
+    public ResponseEntity<List<PermissionDto>>
+    getAvailablePermissions(
+            @PathVariable Long roleId,
+            @RequestParam Long moduleId,
+            @RequestParam Long menuId) {
+        return ResponseEntity.ok(
+                roleDetailService.getAvailablePermissions(
+                        roleId, moduleId, menuId));
+    }
 
-        // =========================================
+    // =========================================
     // ASSIGN PERMISSIONS
     // =========================================
-        @PostMapping("/roles/{roleId}/permissions")
-        public ResponseEntity<RoleDetailResponseDto>
-        assignPermissions(
-                @PathVariable Long roleId,
-                @Valid @RequestBody
-                AssignPermissionRequestDto request) {
-            return ResponseEntity.ok(
-                    roleDetailService.assignPermissions(
-                            roleId, request));
-        }
+    @PostMapping("/roles/{roleId}/permissions")
+    public ResponseEntity<RoleDetailResponseDto>
+    assignPermissions(
+            @PathVariable Long roleId,
+            @Valid @RequestBody AssignPermissionRequestDto request) {
+        return ResponseEntity.ok(
+                roleDetailService.assignPermissions(roleId, request));
+    }
+
     // =========================================
     // REMOVE SINGLE PERMISSION FROM ROLE DETAIL
     // =========================================
-        @DeleteMapping("/{roleDetailId}/permissions/{permissionId}")
-        public ResponseEntity<ApiResponse<RoleDetailResponseDto>>
-        removePermission(
-                @PathVariable Long roleDetailId,
-                @PathVariable Long permissionId) {
-
-            return ResponseEntity.ok(
-                    roleDetailService.removePermissionFromRoleDetail(
-                            roleDetailId, permissionId));
-        }
+    @DeleteMapping("/{roleDetailId}/permissions/{permissionId}")
+    public ResponseEntity<ApiResponse<RoleDetailResponseDto>>
+    removePermission(
+            @PathVariable Long roleDetailId,
+            @PathVariable Long permissionId) {
+        return ResponseEntity.ok(
+                roleDetailService.removePermissionFromRoleDetail(
+                        roleDetailId, permissionId));
+    }
 }
