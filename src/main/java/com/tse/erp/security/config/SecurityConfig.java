@@ -41,12 +41,11 @@ public class SecurityConfig {
                                     java.util.List.of(
                                             "http://localhost:5173",
                                             "https://*.netlify.app",
-                                            "https://tse.unsaidscript.com"
-                                    ));
+                                            "https://tse.unsaidscript.com"));
                             config.setAllowedMethods(
                                     java.util.List.of(
-                                            "GET","POST","PUT",
-                                            "DELETE","OPTIONS"));
+                                            "GET", "POST", "PUT", "PATCH",
+                                            "DELETE", "OPTIONS"));
                             config.setAllowedHeaders(
                                     java.util.List.of("*"));
                             config.setAllowCredentials(true);
@@ -65,6 +64,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/v3/api-docs.yaml"
                         ).permitAll()
+                        // TEMPORARY: remove after first users are created
+                        .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(
                         jwtAuthFilter,
