@@ -66,7 +66,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 // User still active kina check
                 boolean userActive = userRepository
                         .findByUserName(username)
-                        .map(u -> u.getIsActive() == 1)
+                        .map(u -> Integer.valueOf(1).equals(u.getStatus()))
                         .orElse(false);
 
                 if (userActive) {
