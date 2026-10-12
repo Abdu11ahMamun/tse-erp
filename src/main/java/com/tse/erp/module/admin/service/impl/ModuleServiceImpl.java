@@ -1,5 +1,6 @@
 package com.tse.erp.module.admin.service.impl;
 
+import com.tse.erp.common.StatusUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
@@ -32,43 +33,25 @@ public class ModuleServiceImpl implements ModuleService {
     @Override
     public Module createModule(Module module) {
 
-        // Required check
-        if (module.getModuleName() == null ||
-                module.getModuleName().trim().isEmpty()) {
-            throw new BadRequestException(
-                    "Module name cannot be empty");
-        }
+        validateModuleName(module.getModuleName());
+        StatusUtil.validate(module.getStatus());
 
-        // Min length check
-        if (module.getModuleName().trim().length() < 2) {
-            throw new BadRequestException(
-                    "Module name must be at least 2 characters");
-        }
-
-        // Max length check
-        if (module.getModuleName().trim().length() > 100) {
-            throw new BadRequestException(
-                    "Module name cannot exceed 100 characters");
-        }
+        String name = module.getModuleName().trim();
 
         // Duplicate check
         boolean exists = !moduleRepository
-                .findByModuleNameIgnoreCase(
-                        module.getModuleName().trim())
+                .findByModuleNameIgnoreCase(name)
                 .isEmpty();
 
         if (exists) {
             throw new DuplicateResourceException(
-                    "Module already exists with name: "
-                            + module.getModuleName());
+                    "Module already exists with name: " + name);
         }
 
-        module.setModuleName(module.getModuleName().trim());
-        module.setIsActive(1);
+        module.setId(null);
+        module.setModuleName(name);
 
-        // ✅ BaseEntity @PrePersist handle korbe
-        // createdAt/updatedAt manually set korte hobe na
-
+        // Status default 1, BaseEntity @PrePersist handle korbe
         return moduleRepository.save(module);
     }
 
@@ -77,51 +60,49 @@ public class ModuleServiceImpl implements ModuleService {
 
         Module existing = getModuleById(id);
 
-        // Required check
-        if (module.getModuleName() == null ||
-                module.getModuleName().trim().isEmpty()) {
-            throw new BadRequestException(
-                    "Module name cannot be empty");
-        }
+        validateModuleName(module.getModuleName());
+        StatusUtil.validate(module.getStatus());
 
-        // Min length check
-        if (module.getModuleName().trim().length() < 2) {
-            throw new BadRequestException(
-                    "Module name must be at least 2 characters");
-        }
+        String name = module.getModuleName().trim();
 
-        // Max length check
-        if (module.getModuleName().trim().length() > 100) {
-            throw new BadRequestException(
-                    "Module name cannot exceed 100 characters");
-        }
-
-        // Duplicate check — nijer id bade
-        List<Module> found = moduleRepository
-                .findByModuleNameIgnoreCase(
-                        module.getModuleName().trim());
-
-        boolean duplicateExists = found.stream()
+        // Duplicate check, nijer id bade
+        boolean duplicateExists = moduleRepository
+                .findByModuleNameIgnoreCase(name)
+                .stream()
                 .anyMatch(m -> !m.getId().equals(id));
 
         if (duplicateExists) {
             throw new DuplicateResourceException(
-                    "Module already exists with name: "
-                            + module.getModuleName());
+                    "Module already exists with name: " + name);
         }
 
-        existing.setModuleName(module.getModuleName().trim());
-        existing.setIsActive(module.getIsActive());
+        existing.setModuleName(name);
+        if (module.getStatus() != null) {
+            existing.setStatus(module.getStatus());
+        }
 
-        // ✅ BaseEntity @PreUpdate handle korbe updatedDatetime
-        // manually set korte hobe na
-
+        // BaseEntity @PreUpdate handle korbe
         return moduleRepository.save(existing);
     }
 
     @Override
     public void deleteModule(Long id) {
         Module existing = getModuleById(id);
+        // TODO: Menu/Permission thakle delete block
         moduleRepository.delete(existing);
+    }
+
+    private void validateModuleName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new BadRequestException("Module name cannot be empty");
+        }
+        if (name.trim().length() < 2) {
+            throw new BadRequestException(
+                    "Module name must be at least 2 characters");
+        }
+        if (name.trim().length() > 100) {
+            throw new BadRequestException(
+                    "Module name cannot exceed 100 characters");
+        }
     }
 }
