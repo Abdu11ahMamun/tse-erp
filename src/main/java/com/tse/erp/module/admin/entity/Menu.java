@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "menus")
+@Table(name = "admin_menues")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,7 +32,7 @@ public class Menu extends BaseEntity {
     @Column(name = "is_top_menu", columnDefinition = "BIT")
     private Integer isTopMenu;
 
-    // JSON array — permission ids
+    // JSON array, permission ids
     @Column(name = "permission_id", columnDefinition = "LONGTEXT")
     private String permissionId;
 
@@ -41,7 +41,4 @@ public class Menu extends BaseEntity {
 
     @Column(name = "sort_order")
     private String sortOrder;
-
-    @Column(name = "is_active", columnDefinition = "BIT")
-    private Integer isActive;
 }

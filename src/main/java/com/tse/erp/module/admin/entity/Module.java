@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "modules")
+@Table(name = "admin_modules")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,7 +19,4 @@ public class Module extends BaseEntity {
 
     @Column(name = "module_name", length = 100, nullable = false, unique = true)
     private String moduleName;
-
-    @Column(name = "is_active", columnDefinition = "BIT")
-    private Integer isActive;
 }

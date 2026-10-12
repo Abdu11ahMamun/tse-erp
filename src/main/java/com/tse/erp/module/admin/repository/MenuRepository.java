@@ -16,4 +16,6 @@ public interface MenuRepository extends JpaRepository<Menu, Long> {
     // Duplicate check — same module e same menu name
     List<Menu> findByMenuNameIgnoreCaseAndModuleId(
             String menuName, Long moduleId);
+
+    boolean existsByParentMenuId(Long parentMenuId);
 }

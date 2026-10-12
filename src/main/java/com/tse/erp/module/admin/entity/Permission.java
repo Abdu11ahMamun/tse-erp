@@ -3,7 +3,6 @@ package com.tse.erp.module.admin.entity;
 import com.tse.erp.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "admin_permissions")
@@ -23,7 +22,4 @@ public class Permission extends BaseEntity {
 
     @Column(name = "module_id", nullable = false)
     private Long moduleId;
-
-    @Column(name = "is_active", columnDefinition = "BIT")
-    private Integer isActive;
 }
