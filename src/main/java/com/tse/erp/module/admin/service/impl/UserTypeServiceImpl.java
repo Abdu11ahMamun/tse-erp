@@ -5,6 +5,7 @@ import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.entity.UserType;
+import com.tse.erp.module.admin.repository.UserTypeGroupRepository;
 import com.tse.erp.module.admin.repository.UserTypeRepository;
 import com.tse.erp.module.admin.service.UserTypeService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ import java.util.List;
 public class UserTypeServiceImpl implements UserTypeService {
 
     private final UserTypeRepository userTypeRepository;
+    private final UserTypeGroupRepository userTypeGroupRepository;
 
     @Override
     public List<UserType> getAllUserTypes() {
@@ -104,7 +106,10 @@ public class UserTypeServiceImpl implements UserTypeService {
     @Override
     public void deleteUserType(Long id) {
         UserType existing = getUserTypeById(id);
-        // TODO: Users use kora thakle delete block (UserRepository.existsByUserTypeId)
+        if (userTypeGroupRepository.existsByUserTypeId(id)) {
+            throw new BadRequestException(
+                    "Cannot delete: User Type is mapped to Business Unit(s)");
+        }
         userTypeRepository.delete(existing);
     }
 

@@ -17,7 +17,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/roles")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class RoleController {
 
     private final RoleService roleService;
@@ -53,35 +52,28 @@ public class RoleController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{roleId}/details")
+    public ResponseEntity<RoleDetailResponseDto> getRoleWithGroupedPermissions(
+            @PathVariable Long roleId) {
+        return ResponseEntity.ok(
+                roleDetailService.getRoleWithGroupedPermissions(roleId));
+    }
 
-        @GetMapping("/{roleId}/details")
-        public ResponseEntity<RoleDetailResponseDto>
-        getRoleWithGroupedPermissions(
-                @PathVariable Long roleId) {
-            return ResponseEntity.ok(
-                    roleDetailService
-                            .getRoleWithGroupedPermissions(roleId));
-        }
+    @GetMapping("/{roleId}/available-permissions")
+    public ResponseEntity<List<PermissionDto>> getAvailablePermissions(
+            @PathVariable Long roleId,
+            @RequestParam Long moduleId,
+            @RequestParam Long menuId) {
+        return ResponseEntity.ok(
+                roleDetailService.getAvailablePermissions(
+                        roleId, moduleId, menuId));
+    }
 
-        @GetMapping("/{roleId}/available-permissions")
-        public ResponseEntity<List<PermissionDto>>
-        getAvailablePermissions(
-                @PathVariable Long roleId,
-                @RequestParam Long moduleId,
-                @RequestParam Long menuId) {
-            return ResponseEntity.ok(
-                    roleDetailService.getAvailablePermissions(
-                            roleId, moduleId, menuId));
-        }
-
-        @PostMapping("/{roleId}/permissions")
-        public ResponseEntity<RoleDetailResponseDto>
-        assignPermissions(
-                @PathVariable Long roleId,
-                @Valid @RequestBody
-                AssignPermissionRequestDto request) {
-            return ResponseEntity.ok(
-                    roleDetailService.assignPermissions(
-                            roleId, request));
-        }
+    @PostMapping("/{roleId}/permissions")
+    public ResponseEntity<RoleDetailResponseDto> assignPermissions(
+            @PathVariable Long roleId,
+            @Valid @RequestBody AssignPermissionRequestDto request) {
+        return ResponseEntity.ok(
+                roleDetailService.assignPermissions(roleId, request));
+    }
 }

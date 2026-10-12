@@ -19,7 +19,4 @@ public class Role extends BaseEntity {
 
     @Column(name = "role_name", length = 100, nullable = false)
     private String roleName;
-
-    @Column(name = "is_active", columnDefinition = "BIT")
-    private Integer isActive;
 }

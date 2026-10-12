@@ -1,5 +1,6 @@
 package com.tse.erp.module.admin.service.impl;
 
+import com.tse.erp.common.StatusUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
@@ -32,40 +33,25 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public Role createRole(Role role) {
 
-        // Required check
-        if (role.getRoleName() == null ||
-                role.getRoleName().trim().isEmpty()) {
-            throw new BadRequestException(
-                    "Role name cannot be empty");
-        }
+        validateRoleName(role.getRoleName());
+        StatusUtil.validate(role.getStatus());
 
-        // Min length
-        if (role.getRoleName().trim().length() < 2) {
-            throw new BadRequestException(
-                    "Role name must be at least 2 characters");
-        }
-
-        // Max length
-        if (role.getRoleName().trim().length() > 100) {
-            throw new BadRequestException(
-                    "Role name cannot exceed 100 characters");
-        }
+        String name = role.getRoleName().trim();
 
         // Duplicate check
         boolean exists = !roleRepository
-                .findByRoleNameIgnoreCase(role.getRoleName().trim())
+                .findByRoleNameIgnoreCase(name)
                 .isEmpty();
 
         if (exists) {
             throw new DuplicateResourceException(
-                    "Role already exists with name: "
-                            + role.getRoleName());
+                    "Role already exists with name: " + name);
         }
 
-        role.setRoleName(role.getRoleName().trim());
-        role.setIsActive(1);
+        role.setId(null);
+        role.setRoleName(name);
 
-        // ✅ BaseEntity @PrePersist handle korbe
+        // Status default 1, BaseEntity @PrePersist handle korbe
         return roleRepository.save(role);
     }
 
@@ -74,48 +60,49 @@ public class RoleServiceImpl implements RoleService {
 
         Role existing = getRoleById(id);
 
-        // Required check
-        if (role.getRoleName() == null ||
-                role.getRoleName().trim().isEmpty()) {
-            throw new BadRequestException(
-                    "Role name cannot be empty");
-        }
+        validateRoleName(role.getRoleName());
+        StatusUtil.validate(role.getStatus());
 
-        // Min length
-        if (role.getRoleName().trim().length() < 2) {
-            throw new BadRequestException(
-                    "Role name must be at least 2 characters");
-        }
+        String name = role.getRoleName().trim();
 
-        // Max length
-        if (role.getRoleName().trim().length() > 100) {
-            throw new BadRequestException(
-                    "Role name cannot exceed 100 characters");
-        }
-
-        // Duplicate check — nijer id bade
-        List<Role> found = roleRepository
-                .findByRoleNameIgnoreCase(role.getRoleName().trim());
-
-        boolean duplicateExists = found.stream()
+        // Duplicate check, nijer id bade
+        boolean duplicateExists = roleRepository
+                .findByRoleNameIgnoreCase(name)
+                .stream()
                 .anyMatch(r -> !r.getId().equals(id));
 
         if (duplicateExists) {
             throw new DuplicateResourceException(
-                    "Role already exists with name: "
-                            + role.getRoleName());
+                    "Role already exists with name: " + name);
         }
 
-        existing.setRoleName(role.getRoleName().trim());
-        existing.setIsActive(role.getIsActive());
+        existing.setRoleName(name);
+        if (role.getStatus() != null) {
+            existing.setStatus(role.getStatus());
+        }
 
-        // ✅ BaseEntity @PreUpdate handle korbe
+        // BaseEntity @PreUpdate handle korbe
         return roleRepository.save(existing);
     }
 
     @Override
     public void deleteRole(Long id) {
         Role existing = getRoleById(id);
+        // TODO: Users ba Role Details thakle delete block (existsByRoleId)
         roleRepository.delete(existing);
+    }
+
+    private void validateRoleName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new BadRequestException("Role name cannot be empty");
+        }
+        if (name.trim().length() < 2) {
+            throw new BadRequestException(
+                    "Role name must be at least 2 characters");
+        }
+        if (name.trim().length() > 100) {
+            throw new BadRequestException(
+                    "Role name cannot exceed 100 characters");
+        }
     }
 }

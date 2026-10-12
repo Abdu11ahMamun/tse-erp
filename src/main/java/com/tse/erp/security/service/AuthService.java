@@ -63,7 +63,7 @@ public class AuthService {
                 });
 
         // ── Active check ──
-        if (user.getIsActive() != 1) {
+        if (!Integer.valueOf(1).equals(user.getStatus())) {
             saveAuditLog(
                     username, user.getId(), ipAddress,
                     deviceInfo,
@@ -137,7 +137,7 @@ public class AuthService {
                 .orElseThrow(() -> new BadRequestException(
                         "User not found"));
 
-        if (user.getIsActive() != 1) {
+        if (!Integer.valueOf(1).equals(user.getStatus())) {
             throw new BadRequestException("Account is inactive");
         }
 

@@ -26,7 +26,7 @@ public class RoleDetail extends BaseEntity {
     @Column(name = "menu_id", nullable = false)
     private Long menuId;
 
-    // JSON array store hocche — String hisebe rakhbo
+    // JSON array store hocche, String hisebe rakhbo
     @Column(name = "permission_id", columnDefinition = "LONGTEXT")
     private String permissionId;
 }
