@@ -6,7 +6,12 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface UserTypeRepository extends JpaRepository<UserType, Long> {
+public interface UserTypeRepository
+        extends JpaRepository<UserType, Long> {
+
     List<UserType> findAllByOrderByIdDesc();
-    List<UserType> findByUserTypeIgnoreCase(String userType);
+
+    List<UserType> findByTypeNameIgnoreCase(String typeName);
+
+    List<UserType> findByShortNameIgnoreCase(String shortName);
 }

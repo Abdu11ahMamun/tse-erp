@@ -1,5 +1,6 @@
 package com.tse.erp.module.admin.service.impl;
 
+import com.tse.erp.common.StatusUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
@@ -8,7 +9,6 @@ import com.tse.erp.module.admin.repository.UserTypeRepository;
 import com.tse.erp.module.admin.service.UserTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -32,26 +32,30 @@ public class UserTypeServiceImpl implements UserTypeService {
     @Override
     public UserType createUserType(UserType userType) {
 
-        if (userType.getUserType() == null ||
-                userType.getUserType().trim().isEmpty()) {
-            throw new BadRequestException(
-                    "User type name cannot be empty");
-        }
+        validateTypeName(userType.getTypeName());
+        validateShortName(userType.getShortName());
+        validateSortOrder(userType.getSortOrder());
+        StatusUtil.validate(userType.getStatus());
 
-        boolean exists = !userTypeRepository
-                .findByUserTypeIgnoreCase(userType.getUserType().trim())
-                .isEmpty();
+        String name = userType.getTypeName().trim();
+        String shortName = normalizeShortName(userType.getShortName());
 
-        if (exists) {
+        if (!userTypeRepository.findByTypeNameIgnoreCase(name).isEmpty()) {
             throw new DuplicateResourceException(
-                    "User type already exists: " + userType.getUserType());
+                    "User type already exists: " + name);
         }
 
-        userType.setUserType(userType.getUserType().trim());
-        userType.setIsActive(1);
-        userType.setCreatedAt(LocalDateTime.now());
-        userType.setUpdatedAt(LocalDateTime.now());
+        if (shortName != null && !userTypeRepository
+                .findByShortNameIgnoreCase(shortName).isEmpty()) {
+            throw new DuplicateResourceException(
+                    "Short name already exists: " + shortName);
+        }
 
+        userType.setId(null);
+        userType.setTypeName(name);
+        userType.setShortName(shortName);
+
+        // Status default 1 — BaseEntity @PrePersist handle korbe
         return userTypeRepository.save(userType);
     }
 
@@ -60,26 +64,39 @@ public class UserTypeServiceImpl implements UserTypeService {
 
         UserType existing = getUserTypeById(id);
 
-        if (userType.getUserType() == null ||
-                userType.getUserType().trim().isEmpty()) {
-            throw new BadRequestException(
-                    "User type name cannot be empty");
-        }
+        validateTypeName(userType.getTypeName());
+        validateShortName(userType.getShortName());
+        validateSortOrder(userType.getSortOrder());
+        StatusUtil.validate(userType.getStatus());
 
-        List<UserType> found = userTypeRepository
-                .findByUserTypeIgnoreCase(userType.getUserType().trim());
+        String name = userType.getTypeName().trim();
+        String shortName = normalizeShortName(userType.getShortName());
 
-        boolean duplicateExists = found.stream()
+        boolean nameDuplicate = userTypeRepository
+                .findByTypeNameIgnoreCase(name).stream()
                 .anyMatch(u -> !u.getId().equals(id));
-
-        if (duplicateExists) {
+        if (nameDuplicate) {
             throw new DuplicateResourceException(
-                    "User type already exists: " + userType.getUserType());
+                    "User type already exists: " + name);
         }
 
-        existing.setUserType(userType.getUserType().trim());
-        existing.setIsActive(userType.getIsActive());
-        existing.setUpdatedAt(LocalDateTime.now());
+        if (shortName != null) {
+            boolean shortDuplicate = userTypeRepository
+                    .findByShortNameIgnoreCase(shortName).stream()
+                    .anyMatch(u -> !u.getId().equals(id));
+            if (shortDuplicate) {
+                throw new DuplicateResourceException(
+                        "Short name already exists: " + shortName);
+            }
+        }
+
+        existing.setBgId(userType.getBgId());
+        existing.setTypeName(name);
+        existing.setShortName(shortName);
+        existing.setSortOrder(userType.getSortOrder());
+        if (userType.getStatus() != null) {
+            existing.setStatus(userType.getStatus());
+        }
 
         return userTypeRepository.save(existing);
     }
@@ -87,6 +104,49 @@ public class UserTypeServiceImpl implements UserTypeService {
     @Override
     public void deleteUserType(Long id) {
         UserType existing = getUserTypeById(id);
+        // TODO: Users use kora thakle delete block (UserRepository.existsByUserTypeId)
         userTypeRepository.delete(existing);
+    }
+
+    private void validateTypeName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            throw new BadRequestException("User type name cannot be empty");
+        }
+        if (name.trim().length() < 2) {
+            throw new BadRequestException(
+                    "User type name must be at least 2 characters");
+        }
+        if (name.trim().length() > 50) {
+            throw new BadRequestException(
+                    "User type name cannot exceed 50 characters");
+        }
+    }
+
+    private void validateShortName(String shortName) {
+        if (shortName == null || shortName.trim().isEmpty()) {
+            return;
+        }
+        if (shortName.trim().length() < 2) {
+            throw new BadRequestException(
+                    "Short name must be at least 2 characters");
+        }
+        if (shortName.trim().length() > 5) {
+            throw new BadRequestException(
+                    "Short name cannot exceed 5 characters");
+        }
+    }
+
+    private String normalizeShortName(String shortName) {
+        if (shortName == null || shortName.trim().isEmpty()) {
+            return null;
+        }
+        return shortName.trim();
+    }
+
+    private void validateSortOrder(Integer sortOrder) {
+        if (sortOrder != null && sortOrder < 1) {
+            throw new BadRequestException(
+                    "Sort order must be greater than 0");
+        }
     }
 }
