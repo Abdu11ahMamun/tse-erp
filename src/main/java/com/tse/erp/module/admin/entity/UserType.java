@@ -1,42 +1,31 @@
 package com.tse.erp.module.admin.entity;
 
+import com.tse.erp.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
-import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "user_types")
+@Table(name = "admin_user_type")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserType {
+public class UserType extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_type")
-    private String userType;
+    @Column(name = "bg_id")
+    private Long bgId;
 
-    @Column(name = "is_active", columnDefinition = "BIT")
-    private Integer isActive;
+    @Column(name = "type_name", length = 50)
+    private String typeName;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @Column(name = "short_name", length = 5)
+    private String shortName;
 
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    @Column(name = "sort_order")
+    private Integer sortOrder;
 }
