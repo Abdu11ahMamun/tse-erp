@@ -7,6 +7,7 @@ import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
 import com.tse.erp.module.hr.entity.GpsInformation;
+import com.tse.erp.module.hr.repository.EmpAttGpsRepository;
 import com.tse.erp.module.hr.repository.GpsInformationRepository;
 import com.tse.erp.module.hr.service.GpsInformationService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class GpsInformationServiceImpl
 
     private final GpsInformationRepository gpsInformationRepository;
     private final BusinessUnitRepository businessUnitRepository;
+    private final EmpAttGpsRepository empAttGpsRepository;
 
     @Override
     public List<GpsInformation> getAllGpsInformations(Long buId) {
@@ -85,6 +87,10 @@ public class GpsInformationServiceImpl
     public void deleteGpsInformation(Long id) {
         GpsInformation existing = getGpsInformationById(id);
         // TODO: block delete when attendance/geofence records use this location.
+        if (empAttGpsRepository.existsByLocationIdAndStatus(id, 1)) {
+            throw new BadRequestException(
+                    "Cannot delete: GPS location is used in Employee Attendance Config");
+        }
         gpsInformationRepository.delete(existing);
     }
 

@@ -50,7 +50,7 @@ public class User extends BaseEntity {
     @Column(name = "password")
     private String password;
 
-    
+
     @Column(name = "from_date")
     private LocalDateTime fromDate;
 

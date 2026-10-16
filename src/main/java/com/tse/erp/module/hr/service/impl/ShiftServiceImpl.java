@@ -7,6 +7,7 @@ import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
 import com.tse.erp.module.hr.entity.Shift;
+import com.tse.erp.module.hr.repository.EmpAttShiftRepository;
 import com.tse.erp.module.hr.repository.EmployeeRepository;
 import com.tse.erp.module.hr.repository.ShiftRepository;
 import com.tse.erp.module.hr.service.ShiftService;
@@ -27,6 +28,7 @@ public class ShiftServiceImpl implements ShiftService {
     private final ShiftRepository shiftRepository;
     private final BusinessUnitRepository businessUnitRepository;
     private final EmployeeRepository employeeRepository;
+    private final EmpAttShiftRepository empAttShiftRepository;
 
     @Override
     public List<Shift> getAllShifts(Long buId) {
@@ -108,9 +110,9 @@ public class ShiftServiceImpl implements ShiftService {
     @Override
     public void deleteShift(Long id) {
         Shift existing = getShiftById(id);
-        if (employeeRepository.existsByShiftId(id)) {
+        if (empAttShiftRepository.existsByShiftIdAndStatus(id, 1)) {
             throw new BadRequestException(
-                    "Cannot delete: Employees are assigned to this Shift");
+                    "Cannot delete: Shift is used in Employee Attendance Config");
         }
         shiftRepository.delete(existing);
     }

@@ -7,6 +7,7 @@ import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
 import com.tse.erp.module.hr.entity.WifiInformation;
+import com.tse.erp.module.hr.repository.EmpAttWifiRepository;
 import com.tse.erp.module.hr.repository.WifiInformationRepository;
 import com.tse.erp.module.hr.service.WifiInformationService;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class WifiInformationServiceImpl
 
     private final WifiInformationRepository wifiInformationRepository;
     private final BusinessUnitRepository businessUnitRepository;
+    private final EmpAttWifiRepository empAttWifiRepository;
 
     @Override
     public List<WifiInformation> getAllWifiInformations(Long buId) {
@@ -85,6 +87,10 @@ public class WifiInformationServiceImpl
     public void deleteWifiInformation(Long id) {
         WifiInformation existing = getWifiInformationById(id);
         // TODO: block delete when attendance records use this wifi.
+        if (empAttWifiRepository.existsByWifiIdAndStatus(id, 1)) {
+            throw new BadRequestException(
+                    "Cannot delete: WiFi is used in Employee Attendance Config");
+        }
         wifiInformationRepository.delete(existing);
     }
 
