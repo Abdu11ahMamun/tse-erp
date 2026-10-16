@@ -4,8 +4,10 @@ import com.tse.erp.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
-@Table(name = "common_lookup_value")
+@Table(name = "asset_lookup_value")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -29,6 +31,12 @@ public class LookupValue extends BaseEntity {
     @Column(name = "value", nullable = false, length = 20)
     private String value;
 
-    @Column(name = "sort_order")
-    private Integer sortOrder;
+    @Column(name = "type_code", length = 10)
+    private String typeCode;
+
+    @Column(name = "value_code", length = 10)
+    private String valueCode;
+
+    @Column(name = "sort_order", precision = 10, scale = 2)
+    private BigDecimal sortOrder;
 }

@@ -170,10 +170,10 @@ public class AssetItemSpecServiceImpl
         String value = specName.trim();
         List<LookupType> types = lookupTypeRepository
                 .findByBuIdAndTypeNameIgnoreCase(
-                        buId, "Asset Specification");
+                        buId, "Specification");
         if (types.isEmpty()) {
             throw new BadRequestException(
-                    "Lookup Type 'Asset Specification' is not configured for this Business Unit");
+                    "Lookup Type 'Specification' is not configured for this Business Unit");
         }
 
         List<LookupValue> values = lookupValueRepository

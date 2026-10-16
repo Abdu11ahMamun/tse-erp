@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @MappedSuperclass
+@EntityListeners(AuditEntityListener.class)
 public abstract class BaseEntity {
 
     @Column(name = "created_user_id")

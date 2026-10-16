@@ -22,5 +22,10 @@ public interface LookupValueRepository
     List<LookupValue> findByTypeIdAndValueIgnoreCase(
             Long typeId, String value);
 
+    List<LookupValue> findByTypeIdAndValueCodeIgnoreCase(
+            Long typeId, String valueCode);
+
+    List<LookupValue> findByTypeIdOrderByIdAsc(Long typeId);
+
     boolean existsByTypeId(Long typeId);
 }

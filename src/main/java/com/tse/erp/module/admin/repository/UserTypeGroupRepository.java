@@ -12,6 +12,11 @@ public interface UserTypeGroupRepository
 
     List<UserTypeGroup> findByUserTypeIdOrderByIdAsc(Long userTypeId);
 
+    List<UserTypeGroup> findByBuIdOrderByIdDesc(Long buId);
+
+    List<UserTypeGroup> findByUserTypeIdAndBuId(
+            Long userTypeId, Long buId);
+
     List<UserTypeGroup> findAllByOrderByIdDesc();
 
     boolean existsByUserTypeId(Long userTypeId);

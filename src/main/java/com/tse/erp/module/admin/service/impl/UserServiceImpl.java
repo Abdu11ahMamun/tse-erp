@@ -7,6 +7,7 @@ import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.entity.User;
 import com.tse.erp.module.admin.repository.UserRepository;
 import com.tse.erp.module.admin.service.UserService;
+import com.tse.erp.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -213,5 +214,27 @@ public class UserServiceImpl implements UserService {
             throw new BadRequestException(
                     "Valid From Date cannot be after Valid To Date");
         }
+    }
+
+    @Override
+    public User changeStatus(Long id, Integer status) {
+        if (status == null) {
+            throw new BadRequestException("Status cannot be empty");
+        }
+        StatusUtil.validate(status);
+
+        // Nijeke inactive kora jabe na (lockout ar admin-hin hoye jaoa thekate)
+        if (status == 0) {
+            CurrentUser.get().ifPresent(u -> {
+                if (u.userId().equals(id)) {
+                    throw new BadRequestException(
+                            "You cannot deactivate your own account");
+                }
+            });
+        }
+
+        User existing = getUserById(id);
+        existing.setStatus(status);
+        return userRepository.save(existing);
     }
 }

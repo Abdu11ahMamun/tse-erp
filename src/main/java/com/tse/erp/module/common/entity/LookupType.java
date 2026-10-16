@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "common_lookup_type")
+@Table(name = "asset_lookup_type")
 @Getter
 @Setter
 @NoArgsConstructor

@@ -45,9 +45,12 @@ public class User extends BaseEntity {
     @Column(name = "email_verified_at")
     private LocalDateTime emailVerifiedAt;
 
+    @com.fasterxml.jackson.annotation.JsonProperty(
+            access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     @Column(name = "password")
     private String password;
 
+    
     @Column(name = "from_date")
     private LocalDateTime fromDate;
 

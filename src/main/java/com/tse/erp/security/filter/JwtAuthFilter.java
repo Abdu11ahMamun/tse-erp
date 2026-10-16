@@ -1,7 +1,11 @@
 package com.tse.erp.security.filter;
 
-import com.tse.erp.security.jwt.JwtUtil;
+import com.tse.erp.module.admin.entity.User;
+import com.tse.erp.module.admin.entity.UserEmplMap;
+import com.tse.erp.module.admin.repository.UserEmplMapRepository;
 import com.tse.erp.module.admin.repository.UserRepository;
+import com.tse.erp.security.AuthUser;
+import com.tse.erp.security.jwt.JwtUtil;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,6 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -24,6 +29,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final UserEmplMapRepository userEmplMapRepository;
 
     @Override
     protected void doFilterInternal(
@@ -63,20 +69,36 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext()
                             .getAuthentication() == null) {
 
-                // User still active kina check
-                boolean userActive = userRepository
-                        .findByUserName(username)
-                        .map(u -> Integer.valueOf(1).equals(u.getStatus()))
-                        .orElse(false);
+                // User still active kina, ar current BG/BU/employee DB theke
+                Optional<User> userOpt =
+                        userRepository.findByUserName(username);
 
-                if (userActive) {
+                if (userOpt.isPresent()
+                        && Integer.valueOf(1).equals(
+                        userOpt.get().getStatus())) {
+
+                    User u = userOpt.get();
+
+                    Long empId = userEmplMapRepository
+                            .findByUserIdOrderByIdAsc(u.getId())
+                            .stream()
+                            .filter(m -> Integer.valueOf(1)
+                                    .equals(m.getStatus()))
+                            .map(UserEmplMap::getEmplId)
+                            .findFirst()
+                            .orElse(null);
+
+                    AuthUser principal = new AuthUser(
+                            u.getId(), username, empId,
+                            u.getBgId(), u.getBuId());
+
                     // Role authority set koro
                     List<SimpleGrantedAuthority> authorities = List.of(
                             new SimpleGrantedAuthority("ROLE_" + role));
 
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    username, null, authorities);
+                                    principal, null, authorities);
 
                     authToken.setDetails(
                             new WebAuthenticationDetailsSource()
@@ -88,7 +110,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
 
         } catch (ExpiredJwtException e) {
-            // Token expire — 401 return koro
+            // Token expire, 401 return koro
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
             response.getWriter().write(

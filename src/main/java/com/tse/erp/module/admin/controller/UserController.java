@@ -46,4 +46,11 @@ public class UserController {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<User> changeStatus(
+            @PathVariable Long id,
+            @RequestParam Integer status) {
+        return ResponseEntity.ok(userService.changeStatus(id, status));
+    }
 }

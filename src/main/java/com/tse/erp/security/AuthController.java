@@ -1,12 +1,12 @@
 package com.tse.erp.security;
 
-import com.tse.erp.security.model.LoginRequest;
-import com.tse.erp.security.model.RefreshTokenRequest;
-import com.tse.erp.security.model.TokenResponse;
+import com.tse.erp.security.model.*;
 import com.tse.erp.security.service.AuthService;
+import com.tse.erp.security.service.SelfRegisterService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final SelfRegisterService selfRegisterService;
 
     // =========================================
     // LOGIN
@@ -50,5 +51,14 @@ public class AuthController {
     public ResponseEntity<String> logout() {
         return ResponseEntity.ok(
                 "Logged out successfully");
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<SelfRegisterResponse> register(
+            @RequestBody SelfRegisterRequest request,
+            HttpServletRequest httpRequest) {
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(selfRegisterService.register(request, httpRequest));
     }
 }

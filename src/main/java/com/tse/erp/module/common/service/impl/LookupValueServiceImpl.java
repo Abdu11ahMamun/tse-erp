@@ -14,6 +14,7 @@ import com.tse.erp.module.common.repository.LookupValueRepository;
 import com.tse.erp.module.common.service.LookupValueService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -55,12 +56,18 @@ public class LookupValueServiceImpl
     @Override
     public LookupValue createLookupValue(LookupValue lookupValue) {
 
-        validateParents(lookupValue);
+        LookupType type = validateParents(lookupValue);
         validateValue(lookupValue.getValue());
         validateSortOrder(lookupValue.getSortOrder());
         StatusUtil.validate(lookupValue.getStatus());
 
         String value = lookupValue.getValue().trim();
+        String typeCode = cleanCode(lookupValue.getTypeCode(), "Type code");
+        if (typeCode == null) {
+            typeCode = type.getTypeCode();
+        }
+        String valueCode = cleanCode(
+                lookupValue.getValueCode(), "Value code");
 
         // Duplicate check
         boolean exists = !lookupValueRepository
@@ -71,9 +78,18 @@ public class LookupValueServiceImpl
             throw new DuplicateResourceException(
                     "Lookup Value already exists: " + value);
         }
+        if (valueCode != null && !lookupValueRepository
+            .findByTypeIdAndValueCodeIgnoreCase(
+                    lookupValue.getTypeId(), valueCode)
+            .isEmpty()) {
+            throw new DuplicateResourceException(
+                "Value code already exists: " + valueCode);
+        }
 
         lookupValue.setId(null);
         lookupValue.setValue(value);
+        lookupValue.setTypeCode(typeCode);
+        lookupValue.setValueCode(valueCode);
 
         // Status default 1 — BaseEntity @PrePersist handle korbe
         return lookupValueRepository.save(lookupValue);
@@ -85,12 +101,18 @@ public class LookupValueServiceImpl
 
         LookupValue existing = getLookupValueById(id);
 
-        validateParents(lookupValue);
+        LookupType type = validateParents(lookupValue);
         validateValue(lookupValue.getValue());
         validateSortOrder(lookupValue.getSortOrder());
         StatusUtil.validate(lookupValue.getStatus());
 
         String value = lookupValue.getValue().trim();
+        String typeCode = cleanCode(lookupValue.getTypeCode(), "Type code");
+        if (typeCode == null) {
+            typeCode = type.getTypeCode();
+        }
+        String valueCode = cleanCode(
+                lookupValue.getValueCode(), "Value code");
 
         // Duplicate check — nijer id bade
         boolean duplicateExists = lookupValueRepository
@@ -102,11 +124,23 @@ public class LookupValueServiceImpl
             throw new DuplicateResourceException(
                     "Lookup Value already exists: " + value);
         }
+        boolean valueCodeDuplicate = valueCode != null
+                && lookupValueRepository
+                        .findByTypeIdAndValueCodeIgnoreCase(
+                                lookupValue.getTypeId(), valueCode)
+                        .stream()
+                        .anyMatch(x -> !x.getId().equals(id));
+        if (valueCodeDuplicate) {
+            throw new DuplicateResourceException(
+                    "Value code already exists: " + valueCode);
+        }
 
         existing.setBgId(lookupValue.getBgId());
         existing.setBuId(lookupValue.getBuId());
         existing.setTypeId(lookupValue.getTypeId());
         existing.setValue(value);
+        existing.setTypeCode(typeCode);
+        existing.setValueCode(valueCode);
         existing.setSortOrder(lookupValue.getSortOrder());
         if (lookupValue.getStatus() != null) {
             existing.setStatus(lookupValue.getStatus());
@@ -124,7 +158,7 @@ public class LookupValueServiceImpl
     // =========================================
     // VALIDATION HELPERS
     // =========================================
-    private void validateParents(LookupValue lv) {
+    private LookupType validateParents(LookupValue lv) {
         if (lv.getBgId() == null) {
             throw new BadRequestException(
                     "Business Group id cannot be empty");
@@ -164,6 +198,7 @@ public class LookupValueServiceImpl
             throw new BadRequestException(
                     "Lookup Type does not belong to selected Business Unit");
         }
+        return type;
     }
 
     private void validateValue(String value) {
@@ -182,10 +217,23 @@ public class LookupValueServiceImpl
     }
 
     // Sort order optional — thakle >= 1
-    private void validateSortOrder(Integer sortOrder) {
-        if (sortOrder != null && sortOrder < 1) {
+    private void validateSortOrder(BigDecimal sortOrder) {
+        if (sortOrder != null
+                && sortOrder.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException(
                     "Sort order must be greater than 0");
         }
+    }
+
+    private String cleanCode(String value, String label) {
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() > 10) {
+            throw new BadRequestException(
+                    label + " cannot exceed 10 characters");
+        }
+        return trimmed;
     }
 }
