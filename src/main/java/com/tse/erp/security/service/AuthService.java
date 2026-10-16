@@ -97,8 +97,10 @@ public class AuthService {
         }
 
         // ── Generate tokens ──
+        Long empId = findActiveEmployeeId(user.getId());
         String accessToken = jwtUtil.generateAccessToken(
-                username, user.getId(), roleName);
+                username, user.getId(), roleName,
+                empId, user.getBgId(), user.getBuId());
         String refreshToken = jwtUtil.generateRefreshToken(username);
 
         // ── Success log ──
@@ -115,7 +117,7 @@ public class AuthService {
                 .username(username)
                 .role(roleName)
                 .userId(user.getId())
-                .userEmpId(findActiveEmployeeId(user.getId()))
+                .userEmpId(empId)
                 .bgId(user.getBgId())
                 .buId(user.getBuId())
                 .build();
@@ -156,8 +158,10 @@ public class AuthService {
         }
 
         // New access token generate koro
+        Long empId = findActiveEmployeeId(user.getId());
         String newAccessToken = jwtUtil.generateAccessToken(
-                username, user.getId(), roleName);
+                username, user.getId(), roleName,
+                empId, user.getBgId(), user.getBuId());
 
         // New refresh token generate koro (rotation)
         String newRefreshToken = jwtUtil.generateRefreshToken(username);
@@ -169,7 +173,7 @@ public class AuthService {
                 .username(username)
                 .role(roleName)
                 .userId(user.getId())
-                .userEmpId(findActiveEmployeeId(user.getId()))
+                .userEmpId(empId)
                 .bgId(user.getBgId())
                 .buId(user.getBuId())
                 .build();

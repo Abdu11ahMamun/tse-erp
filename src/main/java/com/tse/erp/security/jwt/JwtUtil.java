@@ -1,7 +1,6 @@
 package com.tse.erp.security.jwt;
 
 import io.jsonwebtoken.*;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -34,11 +33,28 @@ public class JwtUtil {
     // =========================================
     // GENERATE ACCESS TOKEN
     // =========================================
+
+    // Purono signature, onno kono jaygay use hole break hobe na
     public String generateAccessToken(String username, Long userId, String role) {
+        return generateAccessToken(username, userId, role, null, null, null);
+    }
+
+    public String generateAccessToken(String username, Long userId, String role,
+                                      Long userEmpId, Long bgId, Long buId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("role", role);
         claims.put("type", "access");
+        // null value claim-e dewa hoy na
+        if (userEmpId != null) {
+            claims.put("userEmpId", userEmpId);
+        }
+        if (bgId != null) {
+            claims.put("bgId", bgId);
+        }
+        if (buId != null) {
+            claims.put("buId", buId);
+        }
 
         return Jwts.builder()
                 .claims(claims)
@@ -97,12 +113,30 @@ public class JwtUtil {
                 .getPayload();
     }
 
+    // Number claim safely Long-e (JSON-e chhoto number Integer hoye ashe)
+    private Long extractLongClaim(String token, String name) {
+        Object v = extractAllClaims(token).get(name);
+        return v instanceof Number n ? n.longValue() : null;
+    }
+
     public String extractUsername(String token) {
         return extractAllClaims(token).getSubject();
     }
 
     public Long extractUserId(String token) {
-        return extractAllClaims(token).get("userId", Long.class);
+        return extractLongClaim(token, "userId");
+    }
+
+    public Long extractUserEmpId(String token) {
+        return extractLongClaim(token, "userEmpId");
+    }
+
+    public Long extractBgId(String token) {
+        return extractLongClaim(token, "bgId");
+    }
+
+    public Long extractBuId(String token) {
+        return extractLongClaim(token, "buId");
     }
 
     public String extractRole(String token) {
