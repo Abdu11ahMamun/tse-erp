@@ -14,6 +14,7 @@ import com.tse.erp.module.hr.entity.Employee;
 import com.tse.erp.module.hr.entity.EmploymentStatus;
 import com.tse.erp.module.hr.entity.EmploymentType;
 import com.tse.erp.module.hr.entity.LevelOfEducation;
+import com.tse.erp.module.hr.entity.Shift;
 import com.tse.erp.module.hr.repository.DepartmentGroupRepository;
 import com.tse.erp.module.hr.repository.DepartmentRepository;
 import com.tse.erp.module.hr.repository.DeptDesigMapRepository;
@@ -23,6 +24,7 @@ import com.tse.erp.module.hr.repository.EmployeeRepository;
 import com.tse.erp.module.hr.repository.EmploymentStatusRepository;
 import com.tse.erp.module.hr.repository.EmploymentTypeRepository;
 import com.tse.erp.module.hr.repository.LevelOfEducationRepository;
+import com.tse.erp.module.hr.repository.ShiftRepository;
 import com.tse.erp.module.hr.service.EmployeeService;
 import com.tse.erp.module.hr.validation.HrLookupValidator;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +51,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmploymentTypeRepository employmentTypeRepository;
     private final EmploymentStatusRepository employmentStatusRepository;
     private final LevelOfEducationRepository levelOfEducationRepository;
+    private final ShiftRepository shiftRepository;
     private final HrLookupValidator hrLookupValidator;
 
     @Override
@@ -225,7 +228,16 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (source.getShiftId() == null) {
             throw new BadRequestException("Shift cannot be empty");
         }
-        // TODO: validate against Shift master when it exists
+        Shift shift = shiftRepository.findById(source.getShiftId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Shift not found with id: " + source.getShiftId()));
+        if (!Integer.valueOf(1).equals(shift.getStatus())) {
+            throw new BadRequestException("Selected Shift is not active");
+        }
+        if (!buId.equals(shift.getBuId())) {
+            throw new BadRequestException(
+                    "Shift does not belong to selected Business Unit");
+        }
         if (source.getOfficeInTime() == null) {
             throw new BadRequestException(
                     "Office in time cannot be empty");

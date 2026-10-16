@@ -23,4 +23,6 @@ public interface EmployeeRepository
     List<Employee> findByPassportNoIgnoreCase(String passportNo);
 
     List<Employee> findByDrivingLicenseNoIgnoreCase(String drivingLicenseNo);
+
+    boolean existsByShiftId(Long shiftId);
 }
