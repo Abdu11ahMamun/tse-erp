@@ -14,4 +14,8 @@ public class TokenResponse {
     private long expiresIn;
     private String username;
     private String role;
+    private Long userId;
+    private Long userEmpId;
+    private Long bgId;
+    private Long buId;
 }

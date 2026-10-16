@@ -5,6 +5,7 @@ import com.tse.erp.module.admin.entity.User;
 import com.tse.erp.module.admin.entity.Role;
 import com.tse.erp.module.admin.repository.UserRepository;
 import com.tse.erp.module.admin.repository.RoleRepository;
+import com.tse.erp.module.admin.repository.UserEmplMapRepository;
 import com.tse.erp.security.LoginAuditLogRepository;
 import com.tse.erp.security.jwt.JwtUtil;
 import com.tse.erp.security.model.LoginAuditLog;
@@ -27,6 +28,7 @@ public class AuthService {
     private final LoginAuditLogRepository auditLogRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final UserEmplMapRepository userEmplMapRepository;
 
     @Value("${security.rate-limit.max-attempts-per-account}")
     private int maxAttemptsPerAccount;
@@ -112,6 +114,10 @@ public class AuthService {
                 .expiresIn(900)
                 .username(username)
                 .role(roleName)
+                .userId(user.getId())
+                .userEmpId(findActiveEmployeeId(user.getId()))
+                .bgId(user.getBgId())
+                .buId(user.getBuId())
                 .build();
     }
 
@@ -162,6 +168,10 @@ public class AuthService {
                 .expiresIn(900)
                 .username(username)
                 .role(roleName)
+                .userId(user.getId())
+                .userEmpId(findActiveEmployeeId(user.getId()))
+                .bgId(user.getBgId())
+                .buId(user.getBuId())
                 .build();
     }
 
@@ -225,5 +235,17 @@ public class AuthService {
             ip = ip.split(",")[0].trim();
         }
         return ip;
+    }
+
+    // =========================================
+    // ACTIVE EMPLOYEE ID (null if none assigned)
+    // =========================================
+    private Long findActiveEmployeeId(Long userId) {
+        return userEmplMapRepository.findByUserIdOrderByIdAsc(userId)
+                .stream()
+                .filter(m -> Integer.valueOf(1).equals(m.getStatus()))
+                .map(m -> m.getEmplId())
+                .findFirst()
+                .orElse(null);
     }
 }
