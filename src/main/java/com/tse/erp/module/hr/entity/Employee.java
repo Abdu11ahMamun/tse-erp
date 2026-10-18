@@ -151,4 +151,21 @@ public class Employee extends BaseEntity {
 
     @Column(name = "fax", length = 30)
     private String fax;
+
+    @Column(name = "disability_status", nullable = false,
+            columnDefinition = "TINYINT NOT NULL DEFAULT 0")
+    private Integer disabilityStatus;
+
+    @Column(name = "disability_type_id")
+    private Long disabilityTypeId;
+
+    @Column(name = "disability_details", length = 500)
+    private String disabilityDetails;
+
+    @Column(name = "has_national_disability_id", nullable = false,
+            columnDefinition = "TINYINT NOT NULL DEFAULT 0")
+    private Integer hasNationalDisabilityId;
+
+    @Column(name = "national_disability_id", length = 30)
+    private String nationalDisabilityId;
 }

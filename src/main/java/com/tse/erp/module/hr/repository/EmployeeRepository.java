@@ -25,4 +25,6 @@ public interface EmployeeRepository
     List<Employee> findByDrivingLicenseNoIgnoreCase(String drivingLicenseNo);
 
     boolean existsByShiftId(Long shiftId);
+
+    List<Employee> findByNationalDisabilityIdIgnoreCase(String nationalDisabilityId);
 }

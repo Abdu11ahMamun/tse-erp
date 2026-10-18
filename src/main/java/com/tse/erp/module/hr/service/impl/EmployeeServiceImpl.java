@@ -95,12 +95,12 @@ public class EmployeeServiceImpl implements EmployeeService {
         }
         return employeeRepository.save(existing);
     }
-
     private void validateAndApply(
             Employee target, Employee source, Long selfId) {
         validateOffice(source, target, selfId);
         validatePersonal(source, target, selfId);
         validateContact(source, target, selfId);
+        validateDisability(source, target, selfId);
     }
 
     private void validateOffice(
@@ -509,5 +509,87 @@ public class EmployeeServiceImpl implements EmployeeService {
             throw new BadRequestException(
                     "Business Unit does not belong to selected Business Group");
         }
+    }
+
+    // Disability section
+    private void validateDisability(Employee src, Employee target, Long selfId) {
+
+        int status = src.getDisabilityStatus() == null ? 0 : src.getDisabilityStatus();
+        if (status != 0 && status != 1) {
+            throw new BadRequestException("Disability status must be 0 or 1");
+        }
+
+        // Status No hole baki shob clear
+        if (status == 0) {
+            target.setDisabilityStatus(0);
+            target.setDisabilityTypeId(null);
+            target.setDisabilityDetails(null);
+            target.setHasNationalDisabilityId(0);
+            target.setNationalDisabilityId(null);
+            return;
+        }
+
+        // Type: HR Lookup, Type naam "Disability Type"
+        hrLookupValidator.validate(
+                src.getDisabilityTypeId(), src.getBgId(),
+                "Disability Type", "Disability type");
+
+        // Details (optional)
+        String details = null;
+        if (src.getDisabilityDetails() != null
+                && !src.getDisabilityDetails().trim().isEmpty()) {
+            details = src.getDisabilityDetails().trim();
+            if (details.length() > 500) {
+                throw new BadRequestException(
+                        "Disability details cannot exceed 500 characters");
+            }
+            if (details.indexOf('<') >= 0 || details.indexOf('>') >= 0) {
+                throw new BadRequestException(
+                        "Disability details contain unsupported characters");
+            }
+        }
+
+        // National Disability ID No (Yes/No)
+        Integer hasId = src.getHasNationalDisabilityId();
+        if (hasId == null) {
+            throw new BadRequestException(
+                    "National disability ID No (Yes/No) cannot be empty");
+        }
+        if (hasId != 0 && hasId != 1) {
+            throw new BadRequestException(
+                    "National disability ID No must be 0 or 1");
+        }
+
+        String ndid = null;
+        if (hasId == 1) {
+            if (src.getNationalDisabilityId() == null
+                    || src.getNationalDisabilityId().trim().isEmpty()) {
+                throw new BadRequestException(
+                        "National disability ID cannot be empty");
+            }
+            ndid = src.getNationalDisabilityId().trim();
+            if (ndid.length() < 5 || ndid.length() > 30) {
+                throw new BadRequestException(
+                        "National disability ID must be between 5 and 30 characters");
+            }
+            if (!ndid.matches("^[A-Za-z0-9-]+$")) {
+                throw new BadRequestException(
+                        "National disability ID allows only letters, digits and hyphen");
+            }
+            final String value = ndid;
+            boolean duplicate = employeeRepository
+                    .findByNationalDisabilityIdIgnoreCase(value).stream()
+                    .anyMatch(x -> selfId == null || !x.getId().equals(selfId));
+            if (duplicate) {
+                throw new DuplicateResourceException(
+                        "National disability ID already exists: " + value);
+            }
+        }
+
+        target.setDisabilityStatus(1);
+        target.setDisabilityTypeId(src.getDisabilityTypeId());
+        target.setDisabilityDetails(details);
+        target.setHasNationalDisabilityId(hasId);
+        target.setNationalDisabilityId(ndid);
     }
 }
