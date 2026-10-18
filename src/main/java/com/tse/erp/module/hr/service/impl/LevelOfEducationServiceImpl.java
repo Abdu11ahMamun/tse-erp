@@ -1,6 +1,7 @@
 package com.tse.erp.module.hr.service.impl;
 
 import com.tse.erp.common.StatusUtil;
+import com.tse.erp.common.ValidationUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
@@ -164,10 +165,7 @@ public class LevelOfEducationServiceImpl
         return shortName.trim();
     }
 
-    private void validateSortOrder(Integer sortOrder) {
-        if (sortOrder != null && sortOrder < 1) {
-            throw new BadRequestException(
-                    "Sort order must be greater than 0");
-        }
+    private void validateSortOrder(java.math.BigDecimal sortOrder) {
+        ValidationUtil.validateSortOrder(sortOrder);
     }
 }
