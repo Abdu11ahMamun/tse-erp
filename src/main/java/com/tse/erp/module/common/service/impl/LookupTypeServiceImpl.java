@@ -75,6 +75,7 @@ public class LookupTypeServiceImpl
         lookupType.setId(null);
         lookupType.setTypeName(name);
         lookupType.setTypeCode(code);
+        lookupType.setCreatedApp("Java");
 
         // Status default 1 — BaseEntity @PrePersist handle korbe
         return lookupTypeRepository.save(lookupType);

@@ -1,7 +1,7 @@
 package com.tse.erp.module.hr.service.impl;
 
-import com.tse.erp.common.ValidationUtil;
 import com.tse.erp.common.StatusUtil;
+import com.tse.erp.common.ValidationUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
@@ -95,6 +95,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         }
         return employeeRepository.save(existing);
     }
+
     private void validateAndApply(
             Employee target, Employee source, Long selfId) {
         validateOffice(source, target, selfId);
@@ -103,6 +104,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         validateDisability(source, target, selfId);
     }
 
+    // =========================================
+    // OFFICE (required: BG/BU, name, department, designation)
+    // =========================================
     private void validateOffice(
             Employee source, Employee target, Long selfId) {
         validateParents(source.getBgId(), source.getBuId());
@@ -116,6 +120,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         String photo = ValidationUtil.optionalText(
                 source.getPhoto(), "Photo", 255);
 
+        // Department (required)
         if (source.getDeptId() == null) {
             throw new BadRequestException("Department cannot be empty");
         }
@@ -135,6 +140,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                     "Department is not mapped to selected Business Unit");
         }
 
+        // Designation (required)
         if (source.getDesigId() == null) {
             throw new BadRequestException("Designation cannot be empty");
         }
@@ -161,63 +167,57 @@ public class EmployeeServiceImpl implements EmployeeService {
                     "Designation is not mapped to selected Department");
         }
 
-        if (source.getEmploymentTypeId() == null) {
-            throw new BadRequestException(
-                    "Employment type cannot be empty");
-        }
-        EmploymentType employmentType = employmentTypeRepository
-                .findById(source.getEmploymentTypeId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Employment Type not found with id: "
-                                + source.getEmploymentTypeId()));
-        if (!Integer.valueOf(1).equals(employmentType.getStatus())) {
-            throw new BadRequestException(
-                    "Selected Employment Type is not active");
-        }
-
-        if (source.getEmploymentStatusId() == null) {
-            throw new BadRequestException(
-                    "Employment status cannot be empty");
-        }
-        EmploymentStatus employmentStatus = employmentStatusRepository
-                .findById(source.getEmploymentStatusId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Employment Status not found with id: "
-                                + source.getEmploymentStatusId()));
-        if (!Integer.valueOf(1).equals(employmentStatus.getStatus())) {
-            throw new BadRequestException(
-                    "Selected Employment Status is not active");
+        // Employment Type (optional)
+        if (source.getEmploymentTypeId() != null) {
+            EmploymentType employmentType = employmentTypeRepository
+                    .findById(source.getEmploymentTypeId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Employment Type not found with id: "
+                                    + source.getEmploymentTypeId()));
+            if (!Integer.valueOf(1).equals(employmentType.getStatus())) {
+                throw new BadRequestException(
+                        "Selected Employment Type is not active");
+            }
         }
 
+        // Employment Status (optional)
+        boolean separated = false;
+        if (source.getEmploymentStatusId() != null) {
+            EmploymentStatus employmentStatus = employmentStatusRepository
+                    .findById(source.getEmploymentStatusId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Employment Status not found with id: "
+                                    + source.getEmploymentStatusId()));
+            if (!Integer.valueOf(1).equals(employmentStatus.getStatus())) {
+                throw new BadRequestException(
+                        "Selected Employment Status is not active");
+            }
+            String statusName = employmentStatus.getStatusName();
+            separated = statusName != null
+                    && (statusName.equalsIgnoreCase("Resigned")
+                    || statusName.equalsIgnoreCase("Terminated")
+                    || statusName.equalsIgnoreCase("Retired"));
+        }
+
+        // Dates (optional, order check shudhu duita thakle)
         LocalDate today = LocalDate.now();
-        if (source.getJoiningDate() == null) {
-            throw new BadRequestException("Joining date cannot be empty");
-        }
-        if (source.getJoiningDate().isAfter(today)) {
+        if (source.getJoiningDate() != null
+                && source.getJoiningDate().isAfter(today)) {
             throw new BadRequestException(
                     "Joining date cannot be a future date");
         }
         if (source.getConfirmationDate() != null
+                && source.getJoiningDate() != null
                 && source.getConfirmationDate().isBefore(source.getJoiningDate())) {
             throw new BadRequestException(
                     "Confirmation date cannot be before joining date");
         }
-
-        Integer probationaryPeriod = ValidationUtil.requiredInt(
-                source.getProbationaryPeriod(), "Probationary period", 1, 24);
-        Integer noticePeriod = ValidationUtil.requiredInt(
-                source.getNoticePeriod(), "Notice period", 0, 12);
-
-        String statusName = employmentStatus.getStatusName();
-        boolean separated = statusName != null
-                && (statusName.equalsIgnoreCase("Resigned")
-                || statusName.equalsIgnoreCase("Terminated")
-                || statusName.equalsIgnoreCase("Retired"));
         if (separated && source.getSeparationDate() == null) {
             throw new BadRequestException(
                     "Separation date is required for the selected Employment Status");
         }
         if (source.getSeparationDate() != null
+                && source.getJoiningDate() != null
                 && source.getSeparationDate().isBefore(source.getJoiningDate())) {
             throw new BadRequestException(
                     "Separation date cannot be before joining date");
@@ -225,42 +225,34 @@ public class EmployeeServiceImpl implements EmployeeService {
         LocalDate separationDate = separated
                 ? source.getSeparationDate() : null;
 
-        if (source.getShiftId() == null) {
-            throw new BadRequestException("Shift cannot be empty");
+        Integer probationaryPeriod = optInt(
+                source.getProbationaryPeriod(), "Probationary period", 1, 24);
+        Integer noticePeriod = optInt(
+                source.getNoticePeriod(), "Notice period", 0, 12);
+
+        // Shift (optional)
+        if (source.getShiftId() != null) {
+            Shift shift = shiftRepository.findById(source.getShiftId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Shift not found with id: " + source.getShiftId()));
+            if (!Integer.valueOf(1).equals(shift.getStatus())) {
+                throw new BadRequestException("Selected Shift is not active");
+            }
+            if (!buId.equals(shift.getBuId())) {
+                throw new BadRequestException(
+                        "Shift does not belong to selected Business Unit");
+            }
         }
-        Shift shift = shiftRepository.findById(source.getShiftId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Shift not found with id: " + source.getShiftId()));
-        if (!Integer.valueOf(1).equals(shift.getStatus())) {
-            throw new BadRequestException("Selected Shift is not active");
-        }
-        if (!buId.equals(shift.getBuId())) {
-            throw new BadRequestException(
-                    "Shift does not belong to selected Business Unit");
-        }
-        if (source.getOfficeInTime() == null) {
-            throw new BadRequestException(
-                    "Office in time cannot be empty");
-        }
-        if (source.getOfficeOutTime() == null) {
-            throw new BadRequestException(
-                    "Office out time cannot be empty");
-        }
-        if (!source.getOfficeOutTime().isAfter(source.getOfficeInTime())) {
+        if (source.getOfficeInTime() != null
+                && source.getOfficeOutTime() != null
+                && !source.getOfficeOutTime().isAfter(source.getOfficeInTime())) {
             throw new BadRequestException(
                     "Office out time must be later than office in time");
         }
-        if (source.getOvertimeAllowance() == null) {
-            throw new BadRequestException(
-                    "Overtime allowance cannot be empty");
-        }
 
+        // Reporting officer (optional)
         Long reportingOfficerId = source.getReportingOfficerId();
-        if (employeeRepository.count() > 0 || selfId != null) {
-            if (reportingOfficerId == null) {
-                throw new BadRequestException(
-                        "Reporting officer cannot be empty");
-            }
+        if (reportingOfficerId != null) {
             Employee reportingOfficer = employeeRepository
                     .findById(reportingOfficerId)
                     .orElseThrow(() -> new ResourceNotFoundException(
@@ -296,44 +288,52 @@ public class EmployeeServiceImpl implements EmployeeService {
         target.setReportingOfficerId(reportingOfficerId);
     }
 
+    // =========================================
+    // PERSONAL (shob optional)
+    // =========================================
     private void validatePersonal(
             Employee source, Employee target, Long selfId) {
         Long bgId = source.getBgId();
-        String fatherName = ValidationUtil.requiredText(
-                source.getFatherName(), "Father's name", 2, 150);
-        String motherName = ValidationUtil.requiredText(
-                source.getMotherName(), "Mother's name", 2, 150);
+        LocalDate today = LocalDate.now();
 
-        String maritalStatus = ValidationUtil.requiredText(
-                source.getMaritalStatus(), "Marital status", 1, 20);
+        String fatherName = optText(
+                source.getFatherName(), "Father's name", 2, 150);
+        String motherName = optText(
+                source.getMotherName(), "Mother's name", 2, 150);
+        String birthPlace = optText(
+                source.getBirthPlace(), "Birth place", 1, 150);
+
+        // Marital status (optional)
         String canonicalMaritalStatus = null;
-        for (String value : List.of(
-                "Single", "Married", "Divorced", "Widowed")) {
-            if (value.equalsIgnoreCase(maritalStatus)) {
-                canonicalMaritalStatus = value;
-                break;
+        if (source.getMaritalStatus() != null
+                && !source.getMaritalStatus().trim().isEmpty()) {
+            String v = source.getMaritalStatus().trim();
+            for (String value : List.of(
+                    "Single", "Married", "Divorced", "Widowed")) {
+                if (value.equalsIgnoreCase(v)) {
+                    canonicalMaritalStatus = value;
+                    break;
+                }
+            }
+            if (canonicalMaritalStatus == null) {
+                throw new BadRequestException(
+                        "Marital status must be Single, Married, Divorced or Widowed");
             }
         }
-        if (canonicalMaritalStatus == null) {
-            throw new BadRequestException(
-                    "Marital status must be Single, Married, Divorced or Widowed");
+
+        // Date of birth (optional)
+        if (source.getDateOfBirth() != null) {
+            if (source.getDateOfBirth().isAfter(today)) {
+                throw new BadRequestException(
+                        "Date of birth cannot be a future date");
+            }
+            if (Period.between(source.getDateOfBirth(), today).getYears() < 18) {
+                throw new BadRequestException(
+                        "Employee must be at least 18 years old");
+            }
         }
 
-        LocalDate today = LocalDate.now();
-        if (source.getDateOfBirth() == null) {
-            throw new BadRequestException("Date of birth cannot be empty");
-        }
-        if (source.getDateOfBirth().isAfter(today)) {
-            throw new BadRequestException(
-                    "Date of birth cannot be a future date");
-        }
-        if (Period.between(source.getDateOfBirth(), today).getYears() < 18) {
-            throw new BadRequestException(
-                    "Employee must be at least 18 years old");
-        }
-
-        String birthPlace = ValidationUtil.requiredText(
-                source.getBirthPlace(), "Birth place", 1, 150);
+        // Spouse (Married hole required)
         String spouseName = null;
         LocalDate dateOfMarriage = null;
         if ("Married".equals(canonicalMaritalStatus)) {
@@ -348,40 +348,52 @@ public class EmployeeServiceImpl implements EmployeeService {
                 throw new BadRequestException(
                         "Date of marriage cannot be a future date");
             }
-            if (!dateOfMarriage.isAfter(source.getDateOfBirth())) {
+            if (source.getDateOfBirth() != null
+                    && !dateOfMarriage.isAfter(source.getDateOfBirth())) {
                 throw new BadRequestException(
                         "Date of marriage must be after date of birth");
             }
         }
 
-        hrLookupValidator.validate(
-                source.getGenderId(), bgId, "Gender", "Gender");
-        hrLookupValidator.validate(
-                source.getReligionId(), bgId, "Religion", "Religion");
-        hrLookupValidator.validate(
-                source.getNationalityId(), bgId, "Nationality", "Nationality");
-        hrLookupValidator.validate(
-                source.getBloodGroupId(), bgId, "Blood Group", "Blood group");
-
-        if (source.getHighestEducationId() == null) {
-            throw new BadRequestException(
-                    "Highest education cannot be empty");
+        // HR Lookups (id dile validate)
+        if (source.getGenderId() != null) {
+            hrLookupValidator.validate(
+                    source.getGenderId(), bgId, "Gender", "Gender");
         }
-        LevelOfEducation education = levelOfEducationRepository
-                .findById(source.getHighestEducationId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Highest Education not found with id: "
-                                + source.getHighestEducationId()));
-        if (!Integer.valueOf(1).equals(education.getStatus())) {
-            throw new BadRequestException(
-                    "Selected Highest Education is not active");
+        if (source.getReligionId() != null) {
+            hrLookupValidator.validate(
+                    source.getReligionId(), bgId, "Religion", "Religion");
+        }
+        if (source.getNationalityId() != null) {
+            hrLookupValidator.validate(
+                    source.getNationalityId(), bgId,
+                    "Nationality", "Nationality");
+        }
+        if (source.getBloodGroupId() != null) {
+            hrLookupValidator.validate(
+                    source.getBloodGroupId(), bgId,
+                    "Blood Group", "Blood group");
         }
 
-        String nid = ValidationUtil.requiredPattern(
-                source.getNid(), "National ID", 10, 17,
+        // Highest education (optional)
+        if (source.getHighestEducationId() != null) {
+            LevelOfEducation education = levelOfEducationRepository
+                    .findById(source.getHighestEducationId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Highest Education not found with id: "
+                                    + source.getHighestEducationId()));
+            if (!Integer.valueOf(1).equals(education.getStatus())) {
+                throw new BadRequestException(
+                        "Selected Highest Education is not active");
+            }
+        }
+
+        // IDs (optional, dile format + unique)
+        String nid = ValidationUtil.optionalPattern(
+                source.getNid(), "National ID", 17,
                 "^([0-9]{10}|[0-9]{13}|[0-9]{17})$",
                 "National ID must be 10, 13 or 17 digits");
-        if (employeeRepository.findByNid(nid).stream()
+        if (nid != null && employeeRepository.findByNid(nid).stream()
                 .anyMatch(x -> selfId == null || !x.getId().equals(selfId))) {
             throw new DuplicateResourceException(
                     "National ID already exists: " + nid);
@@ -408,13 +420,13 @@ public class EmployeeServiceImpl implements EmployeeService {
                     "Driving license no already exists: " + drivingLicenseNo);
         }
 
-        Integer noOfChild = ValidationUtil.requiredInt(
-                source.getNoOfChild(), "No. of child", 0, 30);
-        Integer maleChild = ValidationUtil.requiredInt(
-                source.getMaleChild(), "Male child", 0, 30);
-        Integer femaleChild = ValidationUtil.requiredInt(
+        // Children (optional; tinta-i dile sum mile thakte hobe)
+        Integer noOfChild = optInt(source.getNoOfChild(), "No. of child", 0, 30);
+        Integer maleChild = optInt(source.getMaleChild(), "Male child", 0, 30);
+        Integer femaleChild = optInt(
                 source.getFemaleChild(), "Female child", 0, 30);
-        if (maleChild + femaleChild != noOfChild) {
+        if (noOfChild != null && maleChild != null && femaleChild != null
+                && maleChild + femaleChild != noOfChild) {
             throw new BadRequestException(
                     "Male child + Female child must equal No. of child");
         }
@@ -439,18 +451,22 @@ public class EmployeeServiceImpl implements EmployeeService {
         target.setFemaleChild(femaleChild);
     }
 
+    // =========================================
+    // CONTACT (shob optional)
+    // =========================================
     private void validateContact(
             Employee source, Employee target, Long selfId) {
-        String presentAddress = ValidationUtil.requiredText(
+        String presentAddress = optText(
                 source.getPresentAddress(), "Present address", 10, 500);
-        String permanentAddress = ValidationUtil.requiredText(
+        String permanentAddress = optText(
                 source.getPermanentAddress(), "Permanent address", 10, 500);
 
-        String mobileNo = ValidationUtil.requiredPattern(
-                source.getMobileNo(), "Mobile no", 11, 11,
+        String mobileNo = ValidationUtil.optionalPattern(
+                source.getMobileNo(), "Mobile no", 11,
                 "^01[0-9]{9}$",
                 "Invalid mobile number. Must be 11 digits starting with 01");
-        if (employeeRepository.findByMobileNo(mobileNo).stream()
+        if (mobileNo != null && employeeRepository.findByMobileNo(mobileNo)
+                .stream()
                 .anyMatch(x -> selfId == null || !x.getId().equals(selfId))) {
             throw new DuplicateResourceException(
                     "Mobile no already exists: " + mobileNo);
@@ -465,14 +481,19 @@ public class EmployeeServiceImpl implements EmployeeService {
                 "^[0-9]{6,15}$",
                 "Residence phone must be 6 to 15 digits");
 
-        String email = ValidationUtil.requiredPattern(
-                source.getEmail(), "Email", 5, 150,
+        String email = ValidationUtil.optionalPattern(
+                source.getEmail(), "Email", 150,
                 "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$",
-                "Invalid email format").toLowerCase(Locale.ROOT);
-        if (employeeRepository.findByEmailIgnoreCase(email).stream()
-                .anyMatch(x -> selfId == null || !x.getId().equals(selfId))) {
-            throw new DuplicateResourceException(
-                    "Email already exists: " + email);
+                "Invalid email format");
+        if (email != null) {
+            email = email.toLowerCase(Locale.ROOT);
+            final String e = email;
+            if (employeeRepository.findByEmailIgnoreCase(e).stream()
+                    .anyMatch(x -> selfId == null
+                            || !x.getId().equals(selfId))) {
+                throw new DuplicateResourceException(
+                        "Email already exists: " + e);
+            }
         }
 
         String fax = ValidationUtil.optionalPattern(
@@ -488,35 +509,17 @@ public class EmployeeServiceImpl implements EmployeeService {
         target.setFax(fax);
     }
 
-    private void validateParents(Long bgId, Long buId) {
-        if (bgId == null) {
-            throw new BadRequestException(
-                    "Business Group id cannot be empty");
-        }
-        if (buId == null) {
-            throw new BadRequestException(
-                    "Business Unit id cannot be empty");
-        }
+    // =========================================
+    // DISABILITY
+    // =========================================
+    private void validateDisability(
+            Employee src, Employee target, Long selfId) {
 
-        businessGroupRepository.findById(bgId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Business Group not found with id: " + bgId));
-
-        BusinessUnit businessUnit = businessUnitRepository.findById(buId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Business Unit not found with id: " + buId));
-        if (!bgId.equals(businessUnit.getBgId())) {
-            throw new BadRequestException(
-                    "Business Unit does not belong to selected Business Group");
-        }
-    }
-
-    // Disability section
-    private void validateDisability(Employee src, Employee target, Long selfId) {
-
-        int status = src.getDisabilityStatus() == null ? 0 : src.getDisabilityStatus();
+        int status = src.getDisabilityStatus() == null
+                ? 0 : src.getDisabilityStatus();
         if (status != 0 && status != 1) {
-            throw new BadRequestException("Disability status must be 0 or 1");
+            throw new BadRequestException(
+                    "Disability status must be 0 or 1");
         }
 
         // Status No hole baki shob clear
@@ -529,12 +532,10 @@ public class EmployeeServiceImpl implements EmployeeService {
             return;
         }
 
-        // Type: HR Lookup, Type naam "Disability Type"
         hrLookupValidator.validate(
                 src.getDisabilityTypeId(), src.getBgId(),
                 "Disability Type", "Disability type");
 
-        // Details (optional)
         String details = null;
         if (src.getDisabilityDetails() != null
                 && !src.getDisabilityDetails().trim().isEmpty()) {
@@ -549,7 +550,6 @@ public class EmployeeServiceImpl implements EmployeeService {
             }
         }
 
-        // National Disability ID No (Yes/No)
         Integer hasId = src.getHasNationalDisabilityId();
         if (hasId == null) {
             throw new BadRequestException(
@@ -579,7 +579,8 @@ public class EmployeeServiceImpl implements EmployeeService {
             final String value = ndid;
             boolean duplicate = employeeRepository
                     .findByNationalDisabilityIdIgnoreCase(value).stream()
-                    .anyMatch(x -> selfId == null || !x.getId().equals(selfId));
+                    .anyMatch(x -> selfId == null
+                            || !x.getId().equals(selfId));
             if (duplicate) {
                 throw new DuplicateResourceException(
                         "National disability ID already exists: " + value);
@@ -591,5 +592,60 @@ public class EmployeeServiceImpl implements EmployeeService {
         target.setDisabilityDetails(details);
         target.setHasNationalDisabilityId(hasId);
         target.setNationalDisabilityId(ndid);
+    }
+
+    // =========================================
+    // COMMON
+    // =========================================
+    private void validateParents(Long bgId, Long buId) {
+        if (bgId == null) {
+            throw new BadRequestException(
+                    "Business Group id cannot be empty");
+        }
+        if (buId == null) {
+            throw new BadRequestException(
+                    "Business Unit id cannot be empty");
+        }
+
+        businessGroupRepository.findById(bgId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Business Group not found with id: " + bgId));
+
+        BusinessUnit businessUnit = businessUnitRepository.findById(buId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Business Unit not found with id: " + buId));
+        if (!bgId.equals(businessUnit.getBgId())) {
+            throw new BadRequestException(
+                    "Business Unit does not belong to selected Business Group");
+        }
+    }
+
+    // Optional text: blank hole null, dile min/max check
+    private String optText(String v, String label, int min, int max) {
+        if (v == null || v.trim().isEmpty()) {
+            return null;
+        }
+        String t = v.trim();
+        if (t.length() < min) {
+            throw new BadRequestException(
+                    label + " must be at least " + min + " characters");
+        }
+        if (t.length() > max) {
+            throw new BadRequestException(
+                    label + " cannot exceed " + max + " characters");
+        }
+        return t;
+    }
+
+    // Optional integer: null hole null, dile range check
+    private Integer optInt(Integer v, String label, int min, int max) {
+        if (v == null) {
+            return null;
+        }
+        if (v < min || v > max) {
+            throw new BadRequestException(
+                    label + " must be between " + min + " and " + max);
+        }
+        return v;
     }
 }

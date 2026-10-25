@@ -63,6 +63,7 @@ public class AssetGroupServiceImpl implements AssetGroupService {
 
         assetGroup.setId(null);
         assetGroup.setAssetGroup(name);
+        assetGroup.setCreatedApp("Java");
 
         return assetGroupRepository.save(assetGroup);
     }

@@ -90,6 +90,7 @@ public class LookupValueServiceImpl
         lookupValue.setValue(value);
         lookupValue.setTypeCode(typeCode);
         lookupValue.setValueCode(valueCode);
+        lookupValue.setCreatedApp("Java");
 
         // Status default 1 — BaseEntity @PrePersist handle korbe
         return lookupValueRepository.save(lookupValue);
