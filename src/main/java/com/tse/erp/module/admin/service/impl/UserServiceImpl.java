@@ -4,8 +4,11 @@ import com.tse.erp.common.StatusUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
+import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.entity.User;
 import com.tse.erp.module.admin.entity.UserEmplMap;
+import com.tse.erp.module.admin.repository.BusinessGroupRepository;
+import com.tse.erp.module.admin.repository.BusinessUnitRepository;
 import com.tse.erp.module.admin.repository.UserEmplMapRepository;
 import com.tse.erp.module.admin.repository.UserRepository;
 import com.tse.erp.module.admin.service.UserService;
@@ -32,6 +35,8 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final EmployeeRepository employeeRepository;
     private final UserEmplMapRepository userEmplMapRepository;
+    private final BusinessGroupRepository businessGroupRepository;
+    private final BusinessUnitRepository businessUnitRepository;
 
     @Override
     public List<User> getAllUsers() {
@@ -117,6 +122,7 @@ public class UserServiceImpl implements UserService {
         String email = normalizeEmail(user.getEmail());
         String mobile = normalizeMobile(user.getMobileNo());
         validateDates(user);
+        validateOrg(user.getBgId(), user.getBuId());
         StatusUtil.validate(user.getStatus());
 
         // Inactive theke active korte hole employee linked thakte hobe
@@ -146,10 +152,20 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        existing.setBgId(user.getBgId());
-        existing.setBuId(user.getBuId());
-        existing.setDeptId(user.getDeptId());
-        existing.setDesigId(user.getDesigId());
+        // Org data: request-e value thakle tobei bodlay (null hole purono thake)
+        if (user.getBgId() != null) {
+            existing.setBgId(user.getBgId());
+        }
+        if (user.getBuId() != null) {
+            existing.setBuId(user.getBuId());
+        }
+        if (user.getDeptId() != null) {
+            existing.setDeptId(user.getDeptId());
+        }
+        if (user.getDesigId() != null) {
+            existing.setDesigId(user.getDesigId());
+        }
+
         existing.setUserName(userName);
         existing.setFullName(user.getFullName().trim());
         existing.setEmail(email);
@@ -343,6 +359,24 @@ public class UserServiceImpl implements UserService {
                 && user.getFromDate().isAfter(user.getToDate())) {
             throw new BadRequestException(
                     "Valid From Date cannot be after Valid To Date");
+        }
+    }
+
+    // bgId/buId dile exist ar match kore kina check
+    private void validateOrg(Long bgId, Long buId) {
+        if (bgId != null) {
+            businessGroupRepository.findById(bgId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Business Group not found with id: " + bgId));
+        }
+        if (buId != null) {
+            BusinessUnit bu = businessUnitRepository.findById(buId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Business Unit not found with id: " + buId));
+            if (bgId != null && !bgId.equals(bu.getBgId())) {
+                throw new BadRequestException(
+                        "Business Unit does not belong to selected Business Group");
+            }
         }
     }
 }
