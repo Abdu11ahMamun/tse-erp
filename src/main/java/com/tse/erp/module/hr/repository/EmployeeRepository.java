@@ -29,4 +29,6 @@ public interface EmployeeRepository
     List<Employee> findByOfficeEmailIgnoreCase(String officeEmail);
 
     List<Employee> findByEmployeeCodeIgnoreCase(String employeeCode);
+
+    boolean existsByReportingOfficerId(Long reportingOfficerId);
 }

@@ -18,4 +18,6 @@ public interface MobileNotificationRepository
 
     List<MobileNotification> findByBuIdAndEmplIdOrderByIdDesc(
             Long buId, Long emplId);
+
+    boolean existsByEmplId(Long emplId);
 }

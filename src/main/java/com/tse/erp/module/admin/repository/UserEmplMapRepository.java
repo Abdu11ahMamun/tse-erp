@@ -15,4 +15,6 @@ public interface UserEmplMapRepository
     List<UserEmplMap> findByEmplIdAndStatus(Long emplId, Integer status);
 
     List<UserEmplMap> findByStatus(Integer status);
+
+    List<UserEmplMap> findByEmplId(Long emplId);
 }

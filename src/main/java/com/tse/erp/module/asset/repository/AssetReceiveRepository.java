@@ -16,4 +16,6 @@ public interface AssetReceiveRepository
 
     List<AssetReceive> findByBuIdAndAssetNoIgnoreCase(
             Long buId, String assetNo);
+
+    boolean existsByReceivedById(Long receivedById);
 }

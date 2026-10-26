@@ -25,6 +25,17 @@ import com.tse.erp.module.hr.repository.EmploymentTypeRepository;
 import com.tse.erp.module.hr.repository.LevelOfEducationRepository;
 import com.tse.erp.module.hr.service.EmployeeService;
 import com.tse.erp.module.hr.validation.HrLookupValidator;
+import com.tse.erp.module.admin.entity.UserEmplMap;
+import com.tse.erp.module.admin.repository.UserEmplMapRepository;
+import com.tse.erp.module.asset.repository.AssetReceiveRepository;
+import com.tse.erp.module.hr.repository.EmpAttConfigRepository;
+import com.tse.erp.module.hr.repository.EmployeeCertificationRepository;
+import com.tse.erp.module.hr.repository.EmployeeEducationRepository;
+import com.tse.erp.module.hr.repository.EmployeeJobExperienceRepository;
+import com.tse.erp.module.hr.repository.EmployeeLeaveRepository;
+import com.tse.erp.module.hr.repository.EmployeeTrainingRepository;
+import com.tse.erp.module.hr.repository.MobileNotificationRepository;
+import java.util.ArrayList;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +66,15 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmploymentStatusRepository employmentStatusRepository;
     private final LevelOfEducationRepository levelOfEducationRepository;
     private final HrLookupValidator hrLookupValidator;
+    private final UserEmplMapRepository userEmplMapRepository;
+    private final EmployeeLeaveRepository employeeLeaveRepository;
+    private final EmpAttConfigRepository empAttConfigRepository;
+    private final MobileNotificationRepository mobileNotificationRepository;
+    private final AssetReceiveRepository assetReceiveRepository;
+    private final EmployeeEducationRepository employeeEducationRepository;
+    private final EmployeeTrainingRepository employeeTrainingRepository;
+    private final EmployeeCertificationRepository employeeCertificationRepository;
+    private final EmployeeJobExperienceRepository employeeJobExperienceRepository;
 
     @Override
     public List<Employee> getAllEmployees(Long buId) {
@@ -683,5 +703,69 @@ public class EmployeeServiceImpl implements EmployeeService {
                     label + " allows maximum 2 decimal places");
         }
         return v.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    @Override
+    @Transactional
+    public void deleteEmployee(Long id) {
+        Employee existing = getEmployeeById(id);
+
+        List<UserEmplMap> links = userEmplMapRepository.findByEmplId(id);
+
+        List<String> blockers = new ArrayList<>();
+        if (links.stream()
+                .anyMatch(l -> Integer.valueOf(1).equals(l.getStatus()))) {
+            blockers.add("a User account");
+        }
+        if (employeeLeaveRepository.existsByEmployeeId(id)) {
+            blockers.add("Leave applications");
+        }
+        if (empAttConfigRepository.existsByEmployeeId(id)) {
+            blockers.add("Attendance Configuration");
+        }
+        if (mobileNotificationRepository.existsByEmplId(id)) {
+            blockers.add("Mobile Notifications");
+        }
+        if (employeeRepository.existsByReportingOfficerId(id)) {
+            blockers.add("other Employees (as Reporting Officer)");
+        }
+        if (assetReceiveRepository.existsByReceivedById(id)) {
+            blockers.add("Asset Receive records");
+        }
+
+        if (!blockers.isEmpty()) {
+            throw new BadRequestException(
+                    "Cannot delete: Employee is used in "
+                            + String.join(", ", blockers)
+                            + ". Deactivate the Employee instead.");
+        }
+
+        // Employee-r nijer profile data
+        employeeEducationRepository.deleteAll(
+                employeeEducationRepository.findByEmployeeIdOrderByIdAsc(id));
+        employeeTrainingRepository.deleteAll(
+                employeeTrainingRepository.findByEmployeeIdOrderByIdAsc(id));
+        employeeCertificationRepository.deleteAll(
+                employeeCertificationRepository.findByEmployeeIdOrderByIdAsc(id));
+        employeeJobExperienceRepository.deleteAll(
+                employeeJobExperienceRepository.findByEmployeeIdOrderByIdAsc(id));
+
+        // Inactive user link row (active ta upore block kore diyeche)
+        userEmplMapRepository.deleteAll(links);
+
+        employeeRepository.delete(existing);
+    }
+
+    @Override
+    @Transactional
+    public Employee changeStatus(Long id, Integer status) {
+        if (status == null) {
+            throw new BadRequestException("Status cannot be empty");
+        }
+        StatusUtil.validate(status);
+
+        Employee existing = getEmployeeById(id);
+        existing.setStatus(status);
+        return employeeRepository.save(existing);
     }
 }

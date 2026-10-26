@@ -15,4 +15,6 @@ public interface EmpAttConfigRepository
     List<EmpAttConfig> findByBuIdOrderByIdDesc(Long buId);
 
     List<EmpAttConfig> findByEmployeeId(Long employeeId);
+
+    boolean existsByEmployeeId(Long employeeId);
 }
