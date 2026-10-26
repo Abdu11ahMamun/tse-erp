@@ -71,9 +71,8 @@ public class UserAssignmentServiceImpl implements UserAssignmentService {
                 .findByUserIdOrderByIdAsc(userId);
 
         if (dto.getEmployeeId() == null) {
-            rows.forEach(row -> row.setStatus(0));
-            userEmplMapRepository.saveAll(rows);
-            return getEmployee(userId);
+            throw new BadRequestException(
+                    "A user must have an Employee. Select another Employee instead of removing it");
         }
 
         Long employeeId = dto.getEmployeeId();

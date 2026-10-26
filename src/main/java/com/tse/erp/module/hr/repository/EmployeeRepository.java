@@ -16,17 +16,17 @@ public interface EmployeeRepository
 
     List<Employee> findByNid(String nid);
 
-    List<Employee> findByMobileNo(String mobileNo);
-
-    List<Employee> findByEmailIgnoreCase(String email);
-
     List<Employee> findByPassportNoIgnoreCase(String passportNo);
 
     List<Employee> findByDrivingLicenseNoIgnoreCase(String drivingLicenseNo);
 
-    boolean existsByShiftId(Long shiftId);
-
     List<Employee> findByNationalDisabilityIdIgnoreCase(String nationalDisabilityId);
 
     boolean existsByEmploymentStatusId(Long employmentStatusId);
+
+    List<Employee> findByOfficeMobileNo(String officeMobileNo);
+
+    List<Employee> findByOfficeEmailIgnoreCase(String officeEmail);
+
+    List<Employee> findByEmployeeCodeIgnoreCase(String employeeCode);
 }

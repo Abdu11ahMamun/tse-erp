@@ -4,6 +4,9 @@ import com.tse.erp.common.StatusUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
+import com.tse.erp.module.admin.entity.BusinessUnit;
+import com.tse.erp.module.admin.repository.BusinessGroupRepository;
+import com.tse.erp.module.admin.repository.BusinessUnitRepository;
 import com.tse.erp.module.hr.entity.EmploymentStatus;
 import com.tse.erp.module.hr.repository.EmployeeRepository;
 import com.tse.erp.module.hr.repository.EmploymentStatusRepository;
@@ -20,10 +23,17 @@ public class EmploymentStatusServiceImpl implements EmploymentStatusService {
 
     private final EmploymentStatusRepository employmentStatusRepository;
     private final EmployeeRepository employeeRepository;
+    private final BusinessGroupRepository businessGroupRepository;
+    private final BusinessUnitRepository businessUnitRepository;
 
     @Override
-    public List<EmploymentStatus> getAllEmploymentStatuses() {
-        return employmentStatusRepository.findAllByOrderBySortOrderAscIdAsc();
+    public List<EmploymentStatus> getAllEmploymentStatuses(Long buId) {
+        if (buId == null) {
+            return employmentStatusRepository
+                    .findAllByOrderBySortOrderAscIdAsc();
+        }
+        return employmentStatusRepository
+                .findByBuIdOrderBySortOrderAscIdAsc(buId);
     }
 
     @Override
@@ -37,6 +47,8 @@ public class EmploymentStatusServiceImpl implements EmploymentStatusService {
     public EmploymentStatus createEmploymentStatus(
             EmploymentStatus employmentStatus) {
 
+        validateParents(employmentStatus.getBgId(),
+                employmentStatus.getBuId());
         validateStatusName(employmentStatus.getStatusName());
         validateShortName(employmentStatus.getShortName());
         validateSortOrder(employmentStatus.getSortOrder());
@@ -44,15 +56,17 @@ public class EmploymentStatusServiceImpl implements EmploymentStatusService {
 
         String name = employmentStatus.getStatusName().trim();
         String shortName = normalizeShortName(employmentStatus.getShortName());
+        Long buId = employmentStatus.getBuId();
 
-        // Duplicate check (global, case-insensitive)
+        // Duplicate check (BU-er moddhe, case-insensitive)
         if (!employmentStatusRepository
-                .findByStatusNameIgnoreCase(name).isEmpty()) {
+                .findByBuIdAndStatusNameIgnoreCase(buId, name).isEmpty()) {
             throw new DuplicateResourceException(
                     "Employment Status already exists: " + name);
         }
         if (shortName != null && !employmentStatusRepository
-                .findByShortNameIgnoreCase(shortName).isEmpty()) {
+                .findByBuIdAndShortNameIgnoreCase(buId, shortName)
+                .isEmpty()) {
             throw new DuplicateResourceException(
                     "Short name already exists: " + shortName);
         }
@@ -71,6 +85,8 @@ public class EmploymentStatusServiceImpl implements EmploymentStatusService {
 
         EmploymentStatus existing = getEmploymentStatusById(id);
 
+        validateParents(employmentStatus.getBgId(),
+                employmentStatus.getBuId());
         validateStatusName(employmentStatus.getStatusName());
         validateShortName(employmentStatus.getShortName());
         validateSortOrder(employmentStatus.getSortOrder());
@@ -78,10 +94,11 @@ public class EmploymentStatusServiceImpl implements EmploymentStatusService {
 
         String name = employmentStatus.getStatusName().trim();
         String shortName = normalizeShortName(employmentStatus.getShortName());
+        Long buId = employmentStatus.getBuId();
 
         // Duplicate check, nijer id bade
         boolean nameDuplicate = employmentStatusRepository
-                .findByStatusNameIgnoreCase(name).stream()
+                .findByBuIdAndStatusNameIgnoreCase(buId, name).stream()
                 .anyMatch(x -> !x.getId().equals(id));
         if (nameDuplicate) {
             throw new DuplicateResourceException(
@@ -89,7 +106,8 @@ public class EmploymentStatusServiceImpl implements EmploymentStatusService {
         }
         if (shortName != null) {
             boolean shortDuplicate = employmentStatusRepository
-                    .findByShortNameIgnoreCase(shortName).stream()
+                    .findByBuIdAndShortNameIgnoreCase(buId, shortName)
+                    .stream()
                     .anyMatch(x -> !x.getId().equals(id));
             if (shortDuplicate) {
                 throw new DuplicateResourceException(
@@ -97,6 +115,8 @@ public class EmploymentStatusServiceImpl implements EmploymentStatusService {
             }
         }
 
+        existing.setBgId(employmentStatus.getBgId());
+        existing.setBuId(buId);
         existing.setStatusName(name);
         existing.setShortName(shortName);
         existing.setSortOrder(employmentStatus.getSortOrder());
@@ -122,6 +142,34 @@ public class EmploymentStatusServiceImpl implements EmploymentStatusService {
     // =========================================
     // VALIDATION HELPERS
     // =========================================
+    private void validateParents(Long bgId, Long buId) {
+        if (bgId == null) {
+            throw new BadRequestException(
+                    "Business Group id cannot be empty");
+        }
+        if (buId == null) {
+            throw new BadRequestException(
+                    "Business Unit id cannot be empty");
+        }
+
+        businessGroupRepository.findById(bgId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Business Group not found with id: " + bgId));
+
+        BusinessUnit bu = businessUnitRepository.findById(buId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Business Unit not found with id: " + buId));
+
+        if (!bgId.equals(bu.getBgId())) {
+            throw new BadRequestException(
+                    "Business Unit does not belong to selected Business Group");
+        }
+        if (!Integer.valueOf(1).equals(bu.getStatus())) {
+            throw new BadRequestException(
+                    "Selected Business Unit is not active");
+        }
+    }
+
     private void validateStatusName(String name) {
         if (name == null || name.trim().isEmpty()) {
             throw new BadRequestException("Status name cannot be empty");

@@ -17,9 +17,10 @@ public class EmploymentStatusController {
     private final EmploymentStatusService employmentStatusService;
 
     @GetMapping
-    public ResponseEntity<List<EmploymentStatus>> getAllEmploymentStatuses() {
+    public ResponseEntity<List<EmploymentStatus>> getAllEmploymentStatuses(
+            @RequestParam(required = false) Long buId) {
         return ResponseEntity.ok(
-                employmentStatusService.getAllEmploymentStatuses());
+                employmentStatusService.getAllEmploymentStatuses(buId));
     }
 
     @GetMapping("/{id}")

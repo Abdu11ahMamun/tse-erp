@@ -14,7 +14,6 @@ import com.tse.erp.module.hr.entity.Employee;
 import com.tse.erp.module.hr.entity.EmploymentStatus;
 import com.tse.erp.module.hr.entity.EmploymentType;
 import com.tse.erp.module.hr.entity.LevelOfEducation;
-import com.tse.erp.module.hr.entity.Shift;
 import com.tse.erp.module.hr.repository.DepartmentGroupRepository;
 import com.tse.erp.module.hr.repository.DepartmentRepository;
 import com.tse.erp.module.hr.repository.DeptDesigMapRepository;
@@ -24,13 +23,14 @@ import com.tse.erp.module.hr.repository.EmployeeRepository;
 import com.tse.erp.module.hr.repository.EmploymentStatusRepository;
 import com.tse.erp.module.hr.repository.EmploymentTypeRepository;
 import com.tse.erp.module.hr.repository.LevelOfEducationRepository;
-import com.tse.erp.module.hr.repository.ShiftRepository;
 import com.tse.erp.module.hr.service.EmployeeService;
 import com.tse.erp.module.hr.validation.HrLookupValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.List;
@@ -39,6 +39,9 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 public class EmployeeServiceImpl implements EmployeeService {
+
+    private static final String BD_MOBILE = "^01[0-9]{9}$";
+    private static final String EMAIL = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
 
     private final EmployeeRepository employeeRepository;
     private final BusinessGroupRepository businessGroupRepository;
@@ -51,7 +54,6 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final EmploymentTypeRepository employmentTypeRepository;
     private final EmploymentStatusRepository employmentStatusRepository;
     private final LevelOfEducationRepository levelOfEducationRepository;
-    private final ShiftRepository shiftRepository;
     private final HrLookupValidator hrLookupValidator;
 
     @Override
@@ -104,6 +106,9 @@ public class EmployeeServiceImpl implements EmployeeService {
         validateDisability(source, target, selfId);
     }
 
+    // =========================================
+    // OFFICE (required: BG/BU, name, department, designation)
+    // =========================================
     // =========================================
     // OFFICE (required: BG/BU, name, department, designation)
     // =========================================
@@ -192,6 +197,12 @@ public class EmployeeServiceImpl implements EmployeeService {
                 throw new BadRequestException(
                         "Selected Employment Status is not active");
             }
+            // BU match (purono BU-less row-e skip)
+            if (employmentStatus.getBuId() != null
+                    && !buId.equals(employmentStatus.getBuId())) {
+                throw new BadRequestException(
+                        "Employment Status does not belong to selected Business Unit");
+            }
             String statusName = employmentStatus.getStatusName();
             separated = statusName != null
                     && (statusName.equalsIgnoreCase("Resigned")
@@ -230,19 +241,6 @@ public class EmployeeServiceImpl implements EmployeeService {
         Integer noticePeriod = optInt(
                 source.getNoticePeriod(), "Notice period", 0, 12);
 
-        // Shift (optional)
-        if (source.getShiftId() != null) {
-            Shift shift = shiftRepository.findById(source.getShiftId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Shift not found with id: " + source.getShiftId()));
-            if (!Integer.valueOf(1).equals(shift.getStatus())) {
-                throw new BadRequestException("Selected Shift is not active");
-            }
-            if (!buId.equals(shift.getBuId())) {
-                throw new BadRequestException(
-                        "Shift does not belong to selected Business Unit");
-            }
-        }
         if (source.getOfficeInTime() != null
                 && source.getOfficeOutTime() != null
                 && !source.getOfficeOutTime().isAfter(source.getOfficeInTime())) {
@@ -281,7 +279,6 @@ public class EmployeeServiceImpl implements EmployeeService {
         target.setProbationaryPeriod(probationaryPeriod);
         target.setNoticePeriod(noticePeriod);
         target.setSeparationDate(separationDate);
-        target.setShiftId(source.getShiftId());
         target.setOfficeInTime(source.getOfficeInTime());
         target.setOfficeOutTime(source.getOfficeOutTime());
         target.setOvertimeAllowance(source.getOvertimeAllowance());
@@ -293,7 +290,6 @@ public class EmployeeServiceImpl implements EmployeeService {
     // =========================================
     private void validatePersonal(
             Employee source, Employee target, Long selfId) {
-        Long bgId = source.getBgId();
         LocalDate today = LocalDate.now();
 
         String fatherName = optText(
@@ -302,6 +298,12 @@ public class EmployeeServiceImpl implements EmployeeService {
                 source.getMotherName(), "Mother's name", 2, 150);
         String birthPlace = optText(
                 source.getBirthPlace(), "Birth place", 1, 150);
+
+        // Text field, jemon ashe temon save (shudhu length check)
+        String gender = optText(source.getGender(), "Gender", 1, 20);
+        String religion = optText(source.getReligion(), "Religion", 1, 50);
+        String bloodGroup = optText(
+                source.getBloodGroup(), "Blood group", 1, 10);
 
         // Marital status (optional)
         String canonicalMaritalStatus = null;
@@ -355,24 +357,11 @@ public class EmployeeServiceImpl implements EmployeeService {
             }
         }
 
-        // HR Lookups (id dile validate)
-        if (source.getGenderId() != null) {
-            hrLookupValidator.validate(
-                    source.getGenderId(), bgId, "Gender", "Gender");
-        }
-        if (source.getReligionId() != null) {
-            hrLookupValidator.validate(
-                    source.getReligionId(), bgId, "Religion", "Religion");
-        }
+        // Nationality (lookup id, optional)
         if (source.getNationalityId() != null) {
             hrLookupValidator.validate(
-                    source.getNationalityId(), bgId,
+                    source.getNationalityId(), source.getBgId(),
                     "Nationality", "Nationality");
-        }
-        if (source.getBloodGroupId() != null) {
-            hrLookupValidator.validate(
-                    source.getBloodGroupId(), bgId,
-                    "Blood Group", "Blood group");
         }
 
         // Highest education (optional)
@@ -387,6 +376,12 @@ public class EmployeeServiceImpl implements EmployeeService {
                         "Selected Highest Education is not active");
             }
         }
+
+        // Height / Weight (optional)
+        BigDecimal height = optDecimal(source.getHeight(), "Height",
+                new BigDecimal("30"), new BigDecimal("300"));
+        BigDecimal weight = optDecimal(source.getWeight(), "Weight",
+                new BigDecimal("1"), new BigDecimal("500"));
 
         // IDs (optional, dile format + unique)
         String nid = ValidationUtil.optionalPattern(
@@ -436,13 +431,15 @@ public class EmployeeServiceImpl implements EmployeeService {
         target.setSpouseName(spouseName);
         target.setDateOfBirth(source.getDateOfBirth());
         target.setBirthPlace(birthPlace);
-        target.setGenderId(source.getGenderId());
+        target.setGender(gender);
+        target.setReligion(religion);
+        target.setBloodGroup(bloodGroup);
         target.setMaritalStatus(canonicalMaritalStatus);
         target.setDateOfMarriage(dateOfMarriage);
-        target.setReligionId(source.getReligionId());
         target.setNationalityId(source.getNationalityId());
-        target.setBloodGroupId(source.getBloodGroupId());
         target.setHighestEducationId(source.getHighestEducationId());
+        target.setHeight(height);
+        target.setWeight(weight);
         target.setNid(nid);
         target.setPassportNo(passportNo);
         target.setDrivingLicenseNo(drivingLicenseNo);
@@ -460,53 +457,74 @@ public class EmployeeServiceImpl implements EmployeeService {
                 source.getPresentAddress(), "Present address", 10, 500);
         String permanentAddress = optText(
                 source.getPermanentAddress(), "Permanent address", 10, 500);
+        String district = optText(source.getDistrict(), "District", 1, 100);
+        String thana = optText(source.getThana(), "Thana", 1, 100);
 
-        String mobileNo = ValidationUtil.optionalPattern(
-                source.getMobileNo(), "Mobile no", 11,
-                "^01[0-9]{9}$",
-                "Invalid mobile number. Must be 11 digits starting with 01");
-        if (mobileNo != null && employeeRepository.findByMobileNo(mobileNo)
+        // Office mobile (unique)
+        String officeMobileNo = ValidationUtil.optionalPattern(
+                source.getOfficeMobileNo(), "Office mobile no", 11,
+                BD_MOBILE,
+                "Invalid office mobile number. Must be 11 digits starting with 01");
+        if (officeMobileNo != null
+                && employeeRepository.findByOfficeMobileNo(officeMobileNo)
                 .stream()
                 .anyMatch(x -> selfId == null || !x.getId().equals(selfId))) {
             throw new DuplicateResourceException(
-                    "Mobile no already exists: " + mobileNo);
+                    "Office mobile no already exists: " + officeMobileNo);
         }
 
+        // Personal mobile (unique na)
+        String personalMobileNo = ValidationUtil.optionalPattern(
+                source.getPersonalMobileNo(), "Personal mobile no", 11,
+                BD_MOBILE,
+                "Invalid personal mobile number. Must be 11 digits starting with 01");
+
         String whatsappNo = ValidationUtil.optionalPattern(
-                source.getWhatsappNo(), "WhatsApp no", 11,
-                "^01[0-9]{9}$",
+                source.getWhatsappNo(), "WhatsApp no", 11, BD_MOBILE,
                 "Invalid WhatsApp number. Must be 11 digits starting with 01");
         String residencePhone = ValidationUtil.optionalPattern(
                 source.getResidencePhone(), "Residence phone", 15,
                 "^[0-9]{6,15}$",
                 "Residence phone must be 6 to 15 digits");
+        String emergencyContact = ValidationUtil.optionalPattern(
+                source.getEmergencyContact(), "Emergency contact", 20,
+                "^[0-9+() -]{6,20}$",
+                "Emergency contact allows only digits, +, (, ), space and hyphen (6 to 20 characters)");
 
-        String email = ValidationUtil.optionalPattern(
-                source.getEmail(), "Email", 150,
-                "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$",
-                "Invalid email format");
-        if (email != null) {
-            email = email.toLowerCase(Locale.ROOT);
-            final String e = email;
-            if (employeeRepository.findByEmailIgnoreCase(e).stream()
+        // Office email (unique)
+        String officeEmail = ValidationUtil.optionalPattern(
+                source.getOfficeEmail(), "Office email", 150, EMAIL,
+                "Invalid office email format");
+        if (officeEmail != null) {
+            officeEmail = officeEmail.toLowerCase(Locale.ROOT);
+            final String oe = officeEmail;
+            if (employeeRepository.findByOfficeEmailIgnoreCase(oe).stream()
                     .anyMatch(x -> selfId == null
                             || !x.getId().equals(selfId))) {
                 throw new DuplicateResourceException(
-                        "Email already exists: " + e);
+                        "Office email already exists: " + oe);
             }
         }
 
-        String fax = ValidationUtil.optionalPattern(
-                source.getFax(), "Fax", 30, "^[0-9+() -]{5,30}$",
-                "Fax allows only digits, +, (, ), space and hyphen");
+        // Personal email (unique na)
+        String personalEmail = ValidationUtil.optionalPattern(
+                source.getPersonalEmail(), "Personal email", 150, EMAIL,
+                "Invalid personal email format");
+        if (personalEmail != null) {
+            personalEmail = personalEmail.toLowerCase(Locale.ROOT);
+        }
 
         target.setPresentAddress(presentAddress);
         target.setPermanentAddress(permanentAddress);
-        target.setMobileNo(mobileNo);
+        target.setDistrict(district);
+        target.setThana(thana);
+        target.setOfficeMobileNo(officeMobileNo);
+        target.setPersonalMobileNo(personalMobileNo);
         target.setWhatsappNo(whatsappNo);
         target.setResidencePhone(residencePhone);
-        target.setEmail(email);
-        target.setFax(fax);
+        target.setEmergencyContact(emergencyContact);
+        target.setOfficeEmail(officeEmail);
+        target.setPersonalEmail(personalEmail);
     }
 
     // =========================================
@@ -647,5 +665,23 @@ public class EmployeeServiceImpl implements EmployeeService {
                     label + " must be between " + min + " and " + max);
         }
         return v;
+    }
+
+    // Optional decimal: range + max 2 decimal place
+    private BigDecimal optDecimal(
+            BigDecimal v, String label, BigDecimal min, BigDecimal max) {
+        if (v == null) {
+            return null;
+        }
+        if (v.compareTo(min) < 0 || v.compareTo(max) > 0) {
+            throw new BadRequestException(
+                    label + " must be between " + min.toPlainString()
+                            + " and " + max.toPlainString());
+        }
+        if (v.stripTrailingZeros().scale() > 2) {
+            throw new BadRequestException(
+                    label + " allows maximum 2 decimal places");
+        }
+        return v.setScale(2, RoundingMode.HALF_UP);
     }
 }

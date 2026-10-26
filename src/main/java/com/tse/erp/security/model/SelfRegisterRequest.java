@@ -12,6 +12,7 @@ public class SelfRegisterRequest {
     private String fullName;
     private String email;
     private String mobileNo;
+    private String employeeCode;
     private String password;
     private String confirmPassword;
 }

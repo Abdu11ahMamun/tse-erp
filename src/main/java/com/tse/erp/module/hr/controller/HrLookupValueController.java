@@ -55,4 +55,13 @@ public class HrLookupValueController {
         hrLookupValueService.deleteHrLookupValue(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/by-type-code/{typeCode}")
+    public ResponseEntity<List<HrLookupValue>> getByTypeCode(
+            @PathVariable String typeCode,
+            @RequestParam(required = false) Long bgId,
+            @RequestParam(defaultValue = "true") boolean activeOnly) {
+        return ResponseEntity.ok(
+                hrLookupValueService.getByTypeCode(typeCode, bgId, activeOnly));
+    }
 }

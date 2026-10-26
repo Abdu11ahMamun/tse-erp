@@ -12,7 +12,11 @@ public interface EmploymentStatusRepository
 
     List<EmploymentStatus> findAllByOrderBySortOrderAscIdAsc();
 
-    List<EmploymentStatus> findByStatusNameIgnoreCase(String statusName);
+    List<EmploymentStatus> findByBuIdOrderBySortOrderAscIdAsc(Long buId);
 
-    List<EmploymentStatus> findByShortNameIgnoreCase(String shortName);
+    List<EmploymentStatus> findByBuIdAndStatusNameIgnoreCase(
+            Long buId, String statusName);
+
+    List<EmploymentStatus> findByBuIdAndShortNameIgnoreCase(
+            Long buId, String shortName);
 }

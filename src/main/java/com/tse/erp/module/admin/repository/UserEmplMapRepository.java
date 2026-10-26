@@ -13,4 +13,6 @@ public interface UserEmplMapRepository
     List<UserEmplMap> findByUserIdOrderByIdAsc(Long userId);
 
     List<UserEmplMap> findByEmplIdAndStatus(Long emplId, Integer status);
+
+    List<UserEmplMap> findByStatus(Integer status);
 }

@@ -19,6 +19,12 @@ public class EmploymentStatus extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "bg_id", nullable = false)
+    private Long bgId;
+
+    @Column(name = "bu_id", nullable = false)
+    private Long buId;
+
     @Column(name = "status_name", nullable = false, length = 50)
     private String statusName;
 

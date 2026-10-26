@@ -15,4 +15,6 @@ public interface HrLookupValueService {
     HrLookupValue updateHrLookupValue(Long id, HrLookupValue hrLookupValue);
 
     void deleteHrLookupValue(Long id);
+
+    List<HrLookupValue> getByTypeCode(String typeCode, Long bgId, boolean activeOnly);
 }

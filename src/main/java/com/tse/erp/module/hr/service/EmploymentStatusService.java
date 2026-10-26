@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface EmploymentStatusService {
 
-    List<EmploymentStatus> getAllEmploymentStatuses();
+    List<EmploymentStatus> getAllEmploymentStatuses(Long buId);
 
     EmploymentStatus getEmploymentStatusById(Long id);
 

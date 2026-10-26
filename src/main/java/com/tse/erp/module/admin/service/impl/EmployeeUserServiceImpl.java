@@ -143,9 +143,9 @@ public class EmployeeUserServiceImpl implements EmployeeUserService {
         u.setDesigId(e.getDesigId());
         u.setUserName(dto.getUserName());
         u.setFullName(limit(e.getEmployeeName(), 100));
-        u.setEmail(e.getEmail() != null && e.getEmail().length() <= 100
-                ? e.getEmail() : null);
-        u.setMobileNo(e.getMobileNo());
+        u.setEmail(e.getOfficeEmail() != null && e.getOfficeEmail().length() <= 100
+                ? e.getOfficeEmail() : null);
+        u.setMobileNo(e.getOfficeMobileNo());
         u.setPassword(dto.getPassword());
         u.setFromDate(dto.getFromDate() == null
                 ? null : dto.getFromDate().atStartOfDay());
@@ -156,16 +156,11 @@ public class EmployeeUserServiceImpl implements EmployeeUserService {
         u.setIsAndroidFixed(fixed);
         u.setAndroidId(androidId);
         u.setStatus(dto.getStatus());
+        u.setEmployeeId(employeeId);
 
         // Username unique, password rule, date, status validation UserService-e
         User saved = userService.createUser(u);
 
-        // Employee link (ekই transaction)
-        UserEmplMap map = new UserEmplMap();
-        map.setUserId(saved.getId());
-        map.setEmplId(employeeId);
-        map.setStatus(1);
-        userEmplMapRepository.save(map);
 
         EmployeeUserDto d = baseDto(e);
         d.setUserId(saved.getId());

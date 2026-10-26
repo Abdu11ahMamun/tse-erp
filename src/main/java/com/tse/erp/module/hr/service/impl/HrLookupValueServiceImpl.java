@@ -10,10 +10,16 @@ import com.tse.erp.module.hr.entity.HrLookupValue;
 import com.tse.erp.module.hr.repository.HrLookupTypeRepository;
 import com.tse.erp.module.hr.repository.HrLookupValueRepository;
 import com.tse.erp.module.hr.service.HrLookupValueService;
+import com.tse.erp.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.tse.erp.module.hr.entity.HrLookupType;
+import com.tse.erp.security.AuthUser;
+import com.tse.erp.security.CurrentUser;
+import java.util.ArrayList;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -164,5 +170,45 @@ public class HrLookupValueServiceImpl
             throw new BadRequestException(
                     "Sort order must be greater than 0");
         }
+    }
+
+    @Override
+    public List<HrLookupValue> getByTypeCode(
+            String typeCode, Long bgId, boolean activeOnly) {
+
+        if (typeCode == null || typeCode.trim().isEmpty()) {
+            throw new BadRequestException("Type code cannot be empty");
+        }
+
+        HrLookupType type = hrLookupTypeRepository
+                .findByCodeIgnoreCase(typeCode.trim()).stream()
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Lookup Type not found with code: "
+                                + typeCode.trim()));
+
+        // Inactive type hole dropdown khali
+        if (!Integer.valueOf(1).equals(type.getStatus())) {
+            return new ArrayList<>();
+        }
+
+        // bgId na dile logged-in user-er BG
+        Long effectiveBgId = bgId != null
+                ? bgId
+                : CurrentUser.get().map(AuthUser::bgId).orElse(null);
+
+        List<HrLookupValue> list = effectiveBgId == null
+                ? hrLookupValueRepository
+                .findByTypeIdOrderBySortOrderAscIdAsc(type.getId())
+                : hrLookupValueRepository
+                .findByBgIdAndTypeIdOrderBySortOrderAscIdAsc(
+                        effectiveBgId, type.getId());
+
+        if (activeOnly) {
+            return list.stream()
+                    .filter(v -> Integer.valueOf(1).equals(v.getStatus()))
+                    .toList();
+        }
+        return list;
     }
 }
