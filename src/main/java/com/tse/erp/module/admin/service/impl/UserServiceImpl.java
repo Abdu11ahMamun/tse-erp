@@ -66,8 +66,21 @@ public class UserServiceImpl implements UserService {
         validateDates(user);
         StatusUtil.validate(user.getStatus());
 
-        // Employee must
-        Employee employee = requireAssignableEmployee(user.getEmployeeId());
+        // Employee optional. Dile BG/BU/Dept/Desig oi employee theke, na dile request theke
+        Employee employee = null;
+        if (user.getEmployeeId() != null) {
+            employee = requireAssignableEmployee(user.getEmployeeId());
+        } else {
+            if (user.getBgId() == null) {
+                throw new BadRequestException(
+                        "Business Group id cannot be empty");
+            }
+            if (user.getBuId() == null) {
+                throw new BadRequestException(
+                        "Business Unit id cannot be empty");
+            }
+            validateOrg(user.getBgId(), user.getBuId());
+        }
 
         String userName = user.getUserName().trim();
 
@@ -89,23 +102,26 @@ public class UserServiceImpl implements UserService {
         user.setMobileNo(mobile);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
-        // BG, BU, Dept, Desig employee theke (request-er value ignore)
-        user.setBgId(employee.getBgId());
-        user.setBuId(employee.getBuId());
-        user.setDeptId(employee.getDeptId());
-        user.setDesigId(employee.getDesigId());
+        if (employee != null) {
+            user.setBgId(employee.getBgId());
+            user.setBuId(employee.getBuId());
+            user.setDeptId(employee.getDeptId());
+            user.setDesigId(employee.getDesigId());
+        }
+        // fromDate, toDate request theke jemon ashe temon save hoy
 
-        // Status default 1, BaseEntity @PrePersist handle korbe
         User saved = userRepository.save(user);
 
-        // Employee link, ekই transaction
-        UserEmplMap map = new UserEmplMap();
-        map.setUserId(saved.getId());
-        map.setEmplId(employee.getId());
-        map.setStatus(1);
-        userEmplMapRepository.save(map);
-
-        saved.setEmployeeId(employee.getId());
+        if (employee != null) {
+            UserEmplMap map = new UserEmplMap();
+            map.setUserId(saved.getId());
+            map.setEmplId(employee.getId());
+            map.setActiveFrom(saved.getFromDate());
+            map.setActiveTo(saved.getToDate());
+            map.setStatus(1);
+            userEmplMapRepository.save(map);
+            saved.setEmployeeId(employee.getId());
+        }
         return saved;
     }
 
@@ -125,12 +141,7 @@ public class UserServiceImpl implements UserService {
         validateOrg(user.getBgId(), user.getBuId());
         StatusUtil.validate(user.getStatus());
 
-        // Inactive theke active korte hole employee linked thakte hobe
-        boolean activating = Integer.valueOf(1).equals(user.getStatus())
-                && !Integer.valueOf(1).equals(existing.getStatus());
-        if (activating) {
-            requireEmployeeLinked(id);
-        }
+
 
         String userName = user.getUserName().trim();
 
@@ -213,12 +224,6 @@ public class UserServiceImpl implements UserService {
                 }
             });
         }
-
-        // Active korte hole employee linked thakte hobe
-        if (status == 1 && !Integer.valueOf(1).equals(existing.getStatus())) {
-            requireEmployeeLinked(id);
-        }
-
         existing.setStatus(status);
         User saved = userRepository.save(existing);
         attachEmployeeId(saved);

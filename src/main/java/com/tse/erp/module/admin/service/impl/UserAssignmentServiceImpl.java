@@ -69,10 +69,18 @@ public class UserAssignmentServiceImpl implements UserAssignmentService {
         User user = findUser(userId);
         List<UserEmplMap> rows = userEmplMapRepository
                 .findByUserIdOrderByIdAsc(userId);
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
 
+        // Employee remove: link inactive hoy, row history hishebe thake
         if (dto.getEmployeeId() == null) {
-            throw new BadRequestException(
-                    "A user must have an Employee. Select another Employee instead of removing it");
+            for (UserEmplMap row : rows) {
+                if (isActive(row.getStatus())) {
+                    row.setStatus(0);
+                    row.setActiveTo(now);
+                }
+            }
+            userEmplMapRepository.saveAll(rows);
+            return getEmployee(userId);
         }
 
         Long employeeId = dto.getEmployeeId();
@@ -100,21 +108,33 @@ public class UserAssignmentServiceImpl implements UserAssignmentService {
                     "Employee is already assigned to another user");
         }
 
-        UserEmplMap selectedRow = rows.isEmpty()
-                ? new UserEmplMap()
-                : rows.get(0);
-        selectedRow.setUserId(userId);
-        selectedRow.setEmplId(employeeId);
-        selectedRow.setStatus(1);
-
-        rows.stream()
-                .skip(1)
-                .forEach(row -> row.setStatus(0));
-
-        List<UserEmplMap> rowsToSave = new ArrayList<>(rows);
-        if (rows.isEmpty()) {
-            rowsToSave.add(selectedRow);
+        // Same employee already active: kichu bodlano lagbe na
+        boolean alreadyActive = rows.stream().anyMatch(row ->
+                isActive(row.getStatus())
+                        && employeeId.equals(row.getEmplId()));
+        if (alreadyActive) {
+            return getEmployee(userId);
         }
+
+        // Purono active link close (history thake)
+        List<UserEmplMap> rowsToSave = new ArrayList<>();
+        for (UserEmplMap row : rows) {
+            if (isActive(row.getStatus())) {
+                row.setStatus(0);
+                row.setActiveTo(now);
+                rowsToSave.add(row);
+            }
+        }
+
+        // Notun link
+        UserEmplMap next = new UserEmplMap();
+        next.setUserId(userId);
+        next.setEmplId(employeeId);
+        next.setActiveFrom(user.getFromDate() != null ? user.getFromDate() : now);
+        next.setActiveTo(user.getToDate());
+        next.setStatus(1);
+        rowsToSave.add(next);
+
         userEmplMapRepository.saveAll(rowsToSave);
         return getEmployee(userId);
     }
