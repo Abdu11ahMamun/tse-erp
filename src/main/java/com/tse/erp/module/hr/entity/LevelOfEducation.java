@@ -20,7 +20,7 @@ public class LevelOfEducation extends BaseEntity {
     @Column(name = "level_of_edu", nullable = false, length = 50)
     private String levelOfEdu;
 
-    @Column(name = "short_name", length = 5)
+    @Column(name = "short_name", length = 100)
     private String shortName;
 
     @Column(name = "sort_order", precision = 10, scale = 2)

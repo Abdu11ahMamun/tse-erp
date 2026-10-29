@@ -165,9 +165,9 @@ public class DegreeServiceImpl implements DegreeService {
             throw new BadRequestException(
                     "Short name must be at least 2 characters");
         }
-        if (shortName.trim().length() > 5) {
+        if (shortName.trim().length() > 100) {
             throw new BadRequestException(
-                    "Short name cannot exceed 5 characters");
+                    "Short name cannot exceed 100 characters");
         }
     }
 

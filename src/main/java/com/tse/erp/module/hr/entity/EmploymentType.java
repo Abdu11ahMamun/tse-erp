@@ -20,9 +20,9 @@ public class EmploymentType extends BaseEntity {
     @Column(name = "type_name", nullable = false, length = 50)
     private String typeName;
 
-    @Column(name = "short_name", length = 5)
+    @Column(name = "short_name", length = 100)
     private String shortName;
 
-    @Column(name = "sort_order")
-    private Integer sortOrder;
+    @Column(name = "sort_order", precision = 10, scale = 2)
+    private java.math.BigDecimal sortOrder;
 }
