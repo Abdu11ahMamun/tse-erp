@@ -1,9 +1,12 @@
 package com.tse.erp.security.service;
 
 import com.tse.erp.exception.BadRequestException;
+import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.entity.User;
 import com.tse.erp.module.admin.service.UserService;
+import com.tse.erp.module.hr.entity.Employee;
+import com.tse.erp.module.hr.repository.EmployeeRepository;
 import com.tse.erp.security.model.SelfRegisterRequest;
 import com.tse.erp.security.model.SelfRegisterResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +26,7 @@ public class SelfRegisterService {
     private static final long WINDOW_MS = 60L * 60L * 1000L;
 
     private final UserService userService;
+    private final EmployeeRepository employeeRepository;
 
     @Value("${security.self-register.enabled:false}")
     private boolean enabled;
@@ -32,12 +36,6 @@ public class SelfRegisterService {
 
     @Value("${security.self-register.max-per-ip-per-hour:5}")
     private int maxPerIp;
-
-    @Value("${security.self-register.default-bg-id:0}")
-    private long defaultBgId;
-
-    @Value("${security.self-register.default-bu-id:0}")
-    private long defaultBuId;
 
     @Value("${security.self-register.default-role-id:0}")
     private long defaultRoleId;
@@ -55,8 +53,7 @@ public class SelfRegisterService {
             throw new ResourceNotFoundException(
                     "Self registration is not available");
         }
-        if (defaultBgId <= 0 || defaultBuId <= 0
-                || defaultRoleId <= 0 || defaultUserTypeId <= 0) {
+        if (defaultRoleId <= 0 || defaultUserTypeId <= 0) {
             throw new BadRequestException(
                     "Self registration is not configured");
         }
@@ -69,21 +66,49 @@ public class SelfRegisterService {
                     "Password and Confirm Password do not match");
         }
 
-        // Shudhu allowed field copy hoy. Role/BU/status server theke
+        // Employee code must
+        if (req.getEmployeeCode() == null
+                || req.getEmployeeCode().isBlank()) {
+            throw new BadRequestException("Employee code is required");
+        }
+        Employee emp = employeeRepository
+                .findByEmployeeCodeIgnoreCase(req.getEmployeeCode().trim())
+                .stream().findFirst()
+                .orElseThrow(() -> new BadRequestException(
+                        "Invalid employee code"));
+
+        // Shudhu allowed field copy hoy. Role/status server theke,
+        // BG/BU/Dept/Desig employee theke (UserService boshabe)
         User u = new User();
         u.setUserName(req.getUserName());
         u.setFullName(req.getFullName());
         u.setEmail(req.getEmail());
         u.setMobileNo(req.getMobileNo());
         u.setPassword(req.getPassword());
-        u.setBgId(defaultBgId);
-        u.setBuId(defaultBuId);
         u.setRoleId(defaultRoleId);
         u.setUserTypeId(defaultUserTypeId);
+        u.setEmployeeId(emp.getId());
         u.setStatus(autoActivate ? 1 : 0);
 
-        // Validation (username, email, password rule, unique) UserService-e ache
-        User saved = userService.createUser(u);
+        // Validation (username, email, password rule, unique, employee link)
+        // UserService-e ache. Employee already assigned/inactive hole
+        // code-er existence leak na korte generic message
+        User saved;
+        try {
+            saved = userService.createUser(u);
+        } catch (DuplicateResourceException ex) {
+            if (ex.getMessage() != null
+                    && ex.getMessage().contains("Employee")) {
+                throw new BadRequestException("Invalid employee code");
+            }
+            throw ex;
+        } catch (BadRequestException ex) {
+            if (ex.getMessage() != null
+                    && ex.getMessage().contains("Employee is not active")) {
+                throw new BadRequestException("Invalid employee code");
+            }
+            throw ex;
+        }
 
         return new SelfRegisterResponse(
                 saved.getUserName(),

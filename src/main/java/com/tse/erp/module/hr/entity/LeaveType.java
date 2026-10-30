@@ -23,7 +23,7 @@ public class LeaveType extends BaseEntity {
     @Column(name = "type_name", nullable = false, length = 50)
     private String typeName;
 
-    @Column(name = "short_name", length = 5)
+    @Column(name = "short_name", length = 100)
     private String shortName;
 
     @Column(name = "sort_order")

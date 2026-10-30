@@ -68,4 +68,7 @@ public class User extends BaseEntity {
 
     @Column(name = "android_id")
     private String androidId;
+
+    @Transient
+    private Long employeeId;
 }

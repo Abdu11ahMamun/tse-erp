@@ -1,6 +1,7 @@
 package com.tse.erp.module.admin.service.impl;
 
 import com.tse.erp.common.StatusUtil;
+import com.tse.erp.common.ValidationUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
@@ -135,9 +136,9 @@ public class UserTypeServiceImpl implements UserTypeService {
             throw new BadRequestException(
                     "Short name must be at least 2 characters");
         }
-        if (shortName.trim().length() > 5) {
+        if (shortName.trim().length() > 100) {
             throw new BadRequestException(
-                    "Short name cannot exceed 5 characters");
+                    "Short name cannot exceed 100 characters");
         }
     }
 
@@ -148,10 +149,7 @@ public class UserTypeServiceImpl implements UserTypeService {
         return shortName.trim();
     }
 
-    private void validateSortOrder(Integer sortOrder) {
-        if (sortOrder != null && sortOrder < 1) {
-            throw new BadRequestException(
-                    "Sort order must be greater than 0");
-        }
+    private void validateSortOrder(java.math.BigDecimal sortOrder) {
+        ValidationUtil.validateSortOrder(sortOrder);
     }
 }

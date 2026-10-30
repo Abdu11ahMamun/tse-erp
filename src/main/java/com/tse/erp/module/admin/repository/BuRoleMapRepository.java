@@ -15,4 +15,6 @@ public interface BuRoleMapRepository
     Optional<BuRoleMap> findByRoleIdAndBuId(Long roleId, Long buId);
 
     List<BuRoleMap> findAllByOrderByIdDesc();
+
+    List<BuRoleMap> findByBuIdAndRoleId(Long buId, Long roleId);
 }

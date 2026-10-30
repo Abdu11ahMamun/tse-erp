@@ -27,6 +27,8 @@ import com.tse.erp.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.tse.erp.module.hr.repository.EmpAttConfigRepository;
+import com.tse.erp.module.hr.repository.EmpAttShiftRepository;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -49,6 +51,8 @@ public class EmployeeLeaveServiceImpl
     private final OfficeCalendarRepository officeCalendarRepository;
     private final OfficeCalendarDtlRepository officeCalendarDtlRepository;
     private final HrLookupValueRepository hrLookupValueRepository;
+    private final EmpAttConfigRepository empAttConfigRepository;
+    private final EmpAttShiftRepository empAttShiftRepository;
 
     @Override
     public List<EmployeeLeave> getAllEmployeeLeaves(
@@ -312,8 +316,10 @@ public class EmployeeLeaveServiceImpl
     private Set<LocalDate> nonWorkingDays(
             Employee employee, LocalDate from, LocalDate to) {
         Set<LocalDate> result = new HashSet<>();
-        Shift shift = employee.getShiftId() == null ? null
-                : shiftRepository.findById(employee.getShiftId()).orElse(null);
+
+        // Employee-te ar shiftId nai, tai Attendance Config theke
+        Shift shift = findEmployeeShift(employee);
+
         Set<String> weekends = new HashSet<>();
         if (shift != null && shift.getWeekendDays() != null
                 && !shift.getWeekendDays().isBlank()) {
@@ -322,12 +328,13 @@ public class EmployeeLeaveServiceImpl
             }
         }
         for (LocalDate date = from;
-                !date.isAfter(to); date = date.plusDays(1)) {
+             !date.isAfter(to); date = date.plusDays(1)) {
             if (weekends.contains(date.getDayOfWeek().name()
                     .substring(0, 3))) {
                 result.add(date);
             }
         }
+
         Set<Integer> years = new HashSet<>();
         years.add(from.getYear());
         years.add(to.getYear());
@@ -356,6 +363,20 @@ public class EmployeeLeaveServiceImpl
             }
         }
         return result;
+    }
+
+    // Employee-r active Attendance Config-er prothom active Shift (na thakle null)
+    private Shift findEmployeeShift(Employee employee) {
+        return empAttConfigRepository.findByEmployeeId(employee.getId())
+                .stream()
+                .filter(c -> Integer.valueOf(1).equals(c.getStatus()))
+                .findFirst()
+                .flatMap(c -> empAttShiftRepository
+                        .findByAttConfigIdOrderByIdAsc(c.getId()).stream()
+                        .filter(r -> Integer.valueOf(1).equals(r.getStatus()))
+                        .findFirst())
+                .flatMap(r -> shiftRepository.findById(r.getShiftId()))
+                .orElse(null);
     }
 
     private BigDecimal countDays(

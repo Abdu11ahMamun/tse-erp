@@ -4,15 +4,25 @@ import com.tse.erp.common.StatusUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
+import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.entity.User;
+import com.tse.erp.module.admin.entity.UserEmplMap;
+import com.tse.erp.module.admin.repository.BusinessGroupRepository;
+import com.tse.erp.module.admin.repository.BusinessUnitRepository;
+import com.tse.erp.module.admin.repository.UserEmplMapRepository;
 import com.tse.erp.module.admin.repository.UserRepository;
 import com.tse.erp.module.admin.service.UserService;
+import com.tse.erp.module.hr.entity.Employee;
+import com.tse.erp.module.hr.repository.EmployeeRepository;
 import com.tse.erp.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -23,20 +33,29 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmployeeRepository employeeRepository;
+    private final UserEmplMapRepository userEmplMapRepository;
+    private final BusinessGroupRepository businessGroupRepository;
+    private final BusinessUnitRepository businessUnitRepository;
 
     @Override
     public List<User> getAllUsers() {
-        return userRepository.findAllByOrderByIdDesc();
+        List<User> list = userRepository.findAllByOrderByIdDesc();
+        attachEmployeeIds(list);
+        return list;
     }
 
     @Override
     public User getUserById(Long id) {
-        return userRepository.findById(id)
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found with id: " + id));
+        attachEmployeeId(user);
+        return user;
     }
 
     @Override
+    @Transactional
     public User createUser(User user) {
 
         validateUserName(user.getUserName());
@@ -46,6 +65,22 @@ public class UserServiceImpl implements UserService {
         validatePassword(user.getPassword());
         validateDates(user);
         StatusUtil.validate(user.getStatus());
+
+        // Employee optional. Dile BG/BU/Dept/Desig oi employee theke, na dile request theke
+        Employee employee = null;
+        if (user.getEmployeeId() != null) {
+            employee = requireAssignableEmployee(user.getEmployeeId());
+        } else {
+            if (user.getBgId() == null) {
+                throw new BadRequestException(
+                        "Business Group id cannot be empty");
+            }
+            if (user.getBuId() == null) {
+                throw new BadRequestException(
+                        "Business Unit id cannot be empty");
+            }
+            validateOrg(user.getBgId(), user.getBuId());
+        }
 
         String userName = user.getUserName().trim();
 
@@ -67,21 +102,46 @@ public class UserServiceImpl implements UserService {
         user.setMobileNo(mobile);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
-        // Status default 1 — BaseEntity @PrePersist handle korbe
-        return userRepository.save(user);
+        if (employee != null) {
+            user.setBgId(employee.getBgId());
+            user.setBuId(employee.getBuId());
+            user.setDeptId(employee.getDeptId());
+            user.setDesigId(employee.getDesigId());
+        }
+        // fromDate, toDate request theke jemon ashe temon save hoy
+
+        User saved = userRepository.save(user);
+
+        if (employee != null) {
+            UserEmplMap map = new UserEmplMap();
+            map.setUserId(saved.getId());
+            map.setEmplId(employee.getId());
+            map.setActiveFrom(saved.getFromDate());
+            map.setActiveTo(saved.getToDate());
+            map.setStatus(1);
+            userEmplMapRepository.save(map);
+            saved.setEmployeeId(employee.getId());
+        }
+        return saved;
     }
 
     @Override
+    @Transactional
     public User updateUser(Long id, User user) {
 
-        User existing = getUserById(id);
+        User existing = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with id: " + id));
 
         validateUserName(user.getUserName());
         validateFullName(user.getFullName());
         String email = normalizeEmail(user.getEmail());
         String mobile = normalizeMobile(user.getMobileNo());
         validateDates(user);
+        validateOrg(user.getBgId(), user.getBuId());
         StatusUtil.validate(user.getStatus());
+
+
 
         String userName = user.getUserName().trim();
 
@@ -103,10 +163,20 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        existing.setBgId(user.getBgId());
-        existing.setBuId(user.getBuId());
-        existing.setDeptId(user.getDeptId());
-        existing.setDesigId(user.getDesigId());
+        // Org data: request-e value thakle tobei bodlay (null hole purono thake)
+        if (user.getBgId() != null) {
+            existing.setBgId(user.getBgId());
+        }
+        if (user.getBuId() != null) {
+            existing.setBuId(user.getBuId());
+        }
+        if (user.getDeptId() != null) {
+            existing.setDeptId(user.getDeptId());
+        }
+        if (user.getDesigId() != null) {
+            existing.setDesigId(user.getDesigId());
+        }
+
         existing.setUserName(userName);
         existing.setFullName(user.getFullName().trim());
         existing.setEmail(email);
@@ -128,13 +198,94 @@ public class UserServiceImpl implements UserService {
             existing.setPassword(passwordEncoder.encode(user.getPassword()));
         }
 
-        return userRepository.save(existing);
+        User saved = userRepository.save(existing);
+        attachEmployeeId(saved);
+        return saved;
+    }
+
+    @Override
+    @Transactional
+    public User changeStatus(Long id, Integer status) {
+        if (status == null) {
+            throw new BadRequestException("Status cannot be empty");
+        }
+        StatusUtil.validate(status);
+
+        User existing = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with id: " + id));
+
+        // Nijeke inactive kora jabe na
+        if (status == 0) {
+            CurrentUser.get().ifPresent(u -> {
+                if (u.userId().equals(id)) {
+                    throw new BadRequestException(
+                            "You cannot deactivate your own account");
+                }
+            });
+        }
+        existing.setStatus(status);
+        User saved = userRepository.save(existing);
+        attachEmployeeId(saved);
+        return saved;
     }
 
     @Override
     public void deleteUser(Long id) {
-        User existing = getUserById(id);
+        User existing = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with id: " + id));
         userRepository.delete(existing);
+    }
+
+    // =========================================
+    // EMPLOYEE HELPERS
+    // =========================================
+    private Employee requireAssignableEmployee(Long employeeId) {
+        if (employeeId == null) {
+            throw new BadRequestException(
+                    "Employee is required to create a user");
+        }
+        Employee e = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Employee not found with id: " + employeeId));
+        if (!Integer.valueOf(1).equals(e.getStatus())) {
+            throw new BadRequestException("Selected Employee is not active");
+        }
+        if (!userEmplMapRepository
+                .findByEmplIdAndStatus(employeeId, 1).isEmpty()) {
+            throw new DuplicateResourceException(
+                    "Employee is already assigned to another user");
+        }
+        return e;
+    }
+
+    private void requireEmployeeLinked(Long userId) {
+        boolean linked = userEmplMapRepository
+                .findByUserIdOrderByIdAsc(userId).stream()
+                .anyMatch(m -> Integer.valueOf(1).equals(m.getStatus()));
+        if (!linked) {
+            throw new BadRequestException(
+                    "Assign an Employee to this user before activating it");
+        }
+    }
+
+    private void attachEmployeeId(User user) {
+        user.setEmployeeId(userEmplMapRepository
+                .findByUserIdOrderByIdAsc(user.getId()).stream()
+                .filter(m -> Integer.valueOf(1).equals(m.getStatus()))
+                .map(UserEmplMap::getEmplId)
+                .findFirst()
+                .orElse(null));
+    }
+
+    // List-er jonno ekbar-i query (N+1 na)
+    private void attachEmployeeIds(List<User> users) {
+        Map<Long, Long> byUser = new HashMap<>();
+        for (UserEmplMap m : userEmplMapRepository.findByStatus(1)) {
+            byUser.putIfAbsent(m.getUserId(), m.getEmplId());
+        }
+        users.forEach(u -> u.setEmployeeId(byUser.get(u.getId())));
     }
 
     // =========================================
@@ -168,7 +319,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    // Email optional (spec: Required = No)
+    // Email optional
     private String normalizeEmail(String v) {
         if (v == null || v.trim().isEmpty()) {
             return null;
@@ -216,25 +367,21 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    @Override
-    public User changeStatus(Long id, Integer status) {
-        if (status == null) {
-            throw new BadRequestException("Status cannot be empty");
+    // bgId/buId dile exist ar match kore kina check
+    private void validateOrg(Long bgId, Long buId) {
+        if (bgId != null) {
+            businessGroupRepository.findById(bgId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Business Group not found with id: " + bgId));
         }
-        StatusUtil.validate(status);
-
-        // Nijeke inactive kora jabe na (lockout ar admin-hin hoye jaoa thekate)
-        if (status == 0) {
-            CurrentUser.get().ifPresent(u -> {
-                if (u.userId().equals(id)) {
-                    throw new BadRequestException(
-                            "You cannot deactivate your own account");
-                }
-            });
+        if (buId != null) {
+            BusinessUnit bu = businessUnitRepository.findById(buId)
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Business Unit not found with id: " + buId));
+            if (bgId != null && !bgId.equals(bu.getBgId())) {
+                throw new BadRequestException(
+                        "Business Unit does not belong to selected Business Group");
+            }
         }
-
-        User existing = getUserById(id);
-        existing.setStatus(status);
-        return userRepository.save(existing);
     }
 }

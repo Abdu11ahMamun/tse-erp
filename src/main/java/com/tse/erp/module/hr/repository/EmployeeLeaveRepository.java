@@ -21,4 +21,6 @@ public interface EmployeeLeaveRepository
 
     List<EmployeeLeave> findByEmployeeIdAndLeaveCategoryIdAndStatus(
             Long employeeId, Long leaveCategoryId, Integer status);
+
+    boolean existsByEmployeeId(Long employeeId);
 }

@@ -22,4 +22,10 @@ public class UserEmplMap extends BaseEntity {
 
     @Column(name = "empl_id", nullable = false)
     private Long emplId;
+
+    @Column(name = "active_from")
+    private java.time.LocalDateTime activeFrom;
+
+    @Column(name = "active_to")
+    private java.time.LocalDateTime activeTo;
 }

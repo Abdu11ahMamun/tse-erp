@@ -36,6 +36,9 @@ public class AuthService {
     @Value("${security.rate-limit.window-seconds}")
     private int windowSeconds;
 
+    @Value("${jwt.access-token-expiry}")
+    private long accessTokenExpiry;
+
     // =========================================
     // LOGIN
     // =========================================
@@ -113,7 +116,7 @@ public class AuthService {
         return TokenResponse.builder()
                 .accessToken(accessToken)
                 .tokenType("Bearer")
-                .expiresIn(900)
+                .expiresIn((int) (accessTokenExpiry / 1000))
                 .username(username)
                 .role(roleName)
                 .userId(user.getId())
@@ -169,7 +172,7 @@ public class AuthService {
         return TokenResponse.builder()
                 .accessToken(newAccessToken)
                 .tokenType("Bearer")
-                .expiresIn(900)
+                .expiresIn((int) (accessTokenExpiry / 1000))
                 .username(username)
                 .role(roleName)
                 .userId(user.getId())

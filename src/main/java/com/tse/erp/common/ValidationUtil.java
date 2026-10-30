@@ -96,4 +96,22 @@ public final class ValidationUtil {
         }
         return value;
     }
+
+    // Sort order: optional, > 0, fraction allowed (max 2 decimal places)
+    public static void validateSortOrder(java.math.BigDecimal v) {
+        if (v == null) {
+            return;
+        }
+        if (v.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+            throw new BadRequestException("Sort order must be greater than 0");
+        }
+        if (v.stripTrailingZeros().scale() > 2) {
+            throw new BadRequestException(
+                    "Sort order allows maximum 2 decimal places");
+        }
+        if (v.compareTo(new java.math.BigDecimal("99999999")) > 0) {
+            throw new BadRequestException(
+                    "Sort order cannot exceed 99999999");
+        }
+    }
 }
