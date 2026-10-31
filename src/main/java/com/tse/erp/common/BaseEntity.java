@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 @EntityListeners(AuditEntityListener.class)
 public abstract class BaseEntity {
 
+    public static final String APP_NAME = AppConstants.APP_NAME;
+
     @Column(name = "created_user_id")
     private Long createdUserId;
 
@@ -41,7 +43,9 @@ public abstract class BaseEntity {
     @PrePersist
     protected void onCreate() {
         this.createdDatetime = LocalDateTime.now();
-        this.updatedDatetime = LocalDateTime.now();
+        if (this.createdApp == null) {
+            this.createdApp = AppConstants.APP_NAME;
+        }
         if (this.status == null) {
             this.status = 1;
         }
@@ -50,5 +54,6 @@ public abstract class BaseEntity {
     @PreUpdate
     protected void onUpdate() {
         this.updatedDatetime = LocalDateTime.now();
+        this.updatedApp = AppConstants.APP_NAME;
     }
 }
