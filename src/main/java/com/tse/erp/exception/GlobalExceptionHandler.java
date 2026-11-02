@@ -1,6 +1,7 @@
 package com.tse.erp.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -70,6 +71,33 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    // =========================================
+    // 409 — Foreign Key / Data Integrity Violation
+    // =========================================
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex,
+            HttpServletRequest request) {
+
+        String message = "Cannot delete or modify this record because it is referenced as a foreign key in another table.";
+        String rootMsg = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : "";
+        if (rootMsg != null && rootMsg.toLowerCase().contains("afm_p_type_p_through_map")) {
+            message = "Cannot delete this Lookup Value because it is already used in Payment Type to Payment Through Mapping.";
+        } else if (rootMsg != null && rootMsg.toLowerCase().contains("afm_v_type_p_type_map")) {
+            message = "Cannot delete this Lookup Value because it is already used in Voucher Type to Payment Type Mapping.";
+        }
+
+        ErrorResponse error = ErrorResponse.builder()
+                .status(HttpStatus.CONFLICT.value())
+                .error("Conflict")
+                .message(message)
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     // =========================================
