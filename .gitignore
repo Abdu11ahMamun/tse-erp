@@ -34,4 +34,4 @@ Thumbs.db
 # Others
 *.class
 .target
-target/classes/*
+target/classes/*target/
