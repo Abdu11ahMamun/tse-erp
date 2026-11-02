@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Ensures database-level FOREIGN KEY (ON DELETE RESTRICT) constraints exist
- * on AFM_P_TYPE_P_THROUGH_MAP and AFM_V_TYPE_P_TYPE_MAP referencing AFM_LOOKUP_VALUE(ID).
+ * on AFM accounting tables.
  */
 @Slf4j
 @Component
@@ -47,6 +47,69 @@ public class AfmDatabaseConstraintInitializer implements ApplicationRunner {
                 "AFM_LOOKUP_VALUE",
                 "ID",
                 "FK_AFM_VT_PT_MAP_PAYMENT_TYPE"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_BANK_CHEQUE_MAP",
+                "BANK_ID",
+                "AFM_BANK",
+                "ID",
+                "FK_AFM_BC_MAP_BANK"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_BANK_CHEQUE_MAP",
+                "BANK_ACCOUNT_ID",
+                "AFM_BANK_DTLS",
+                "ID",
+                "FK_AFM_BC_MAP_BANK_ACCOUNT"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_BANK_CHEQUE_MAP",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_AFM_BC_MAP_BG"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_BANK_CHEQUE_MAP",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_AFM_BC_MAP_BU"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_CALENDAR",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_AFM_CAL_BG"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_CALENDAR",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_AFM_CAL_BU"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_CALENDAR_MONTH",
+                "AFM_CALENDAR_ID",
+                "AFM_CALENDAR",
+                "ID",
+                "FK_AFM_CAL_MONTH_CAL"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_PERIOD",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_AFM_PERIOD_BG"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_PERIOD",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_AFM_PERIOD_BU"
         );
     }
 
@@ -89,4 +152,3 @@ public class AfmDatabaseConstraintInitializer implements ApplicationRunner {
         }
     }
 }
-
