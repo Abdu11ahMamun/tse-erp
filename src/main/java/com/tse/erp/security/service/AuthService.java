@@ -1,11 +1,13 @@
 package com.tse.erp.security.service;
 
 import com.tse.erp.exception.BadRequestException;
-import com.tse.erp.module.admin.entity.User;
 import com.tse.erp.module.admin.entity.Role;
-import com.tse.erp.module.admin.repository.UserRepository;
+import com.tse.erp.module.admin.entity.User;
+import com.tse.erp.module.admin.entity.UserType;
 import com.tse.erp.module.admin.repository.RoleRepository;
 import com.tse.erp.module.admin.repository.UserEmplMapRepository;
+import com.tse.erp.module.admin.repository.UserRepository;
+import com.tse.erp.module.admin.repository.UserTypeRepository;
 import com.tse.erp.security.LoginAuditLogRepository;
 import com.tse.erp.security.jwt.JwtUtil;
 import com.tse.erp.security.model.LoginAuditLog;
@@ -29,6 +31,7 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final UserEmplMapRepository userEmplMapRepository;
+    private final UserTypeRepository userTypeRepository;
 
     @Value("${security.rate-limit.max-attempts-per-account}")
     private int maxAttemptsPerAccount;
@@ -57,7 +60,6 @@ public class AuthService {
         User user = userRepository
                 .findByUserName(username)
                 .orElseGet(() -> {
-                    // User nai — log kore error throw koro
                     saveAuditLog(
                             username, null, ipAddress,
                             deviceInfo,
@@ -121,6 +123,8 @@ public class AuthService {
                 .role(roleName)
                 .userId(user.getId())
                 .userEmpId(empId)
+                .employeeId(empId)
+                .userTypeCode(findUserTypeCode(user.getUserTypeId()))
                 .bgId(user.getBgId())
                 .buId(user.getBuId())
                 .build();
@@ -131,7 +135,6 @@ public class AuthService {
     // =========================================
     public TokenResponse refreshToken(String refreshToken) {
 
-        // Validate refresh token
         if (!jwtUtil.validateToken(refreshToken)) {
             throw new BadRequestException("Invalid refresh token");
         }
@@ -160,14 +163,10 @@ public class AuthService {
                     .orElse("USER");
         }
 
-        // New access token generate koro
         Long empId = findActiveEmployeeId(user.getId());
         String newAccessToken = jwtUtil.generateAccessToken(
                 username, user.getId(), roleName,
                 empId, user.getBgId(), user.getBuId());
-
-        // New refresh token generate koro (rotation)
-        String newRefreshToken = jwtUtil.generateRefreshToken(username);
 
         return TokenResponse.builder()
                 .accessToken(newAccessToken)
@@ -177,6 +176,8 @@ public class AuthService {
                 .role(roleName)
                 .userId(user.getId())
                 .userEmpId(empId)
+                .employeeId(empId)
+                .userTypeCode(findUserTypeCode(user.getUserTypeId()))
                 .bgId(user.getBgId())
                 .buId(user.getBuId())
                 .build();
@@ -237,7 +238,6 @@ public class AuthService {
         if (ip == null || ip.isEmpty()) {
             ip = request.getRemoteAddr();
         }
-        // Multiple IPs thakle first one nao
         if (ip != null && ip.contains(",")) {
             ip = ip.split(",")[0].trim();
         }
@@ -253,6 +253,18 @@ public class AuthService {
                 .filter(m -> Integer.valueOf(1).equals(m.getStatus()))
                 .map(m -> m.getEmplId())
                 .findFirst()
+                .orElse(null);
+    }
+
+    // =========================================
+    // USER TYPE CODE (null if none)
+    // =========================================
+    private String findUserTypeCode(Long userTypeId) {
+        if (userTypeId == null) {
+            return null;
+        }
+        return userTypeRepository.findById(userTypeId)
+                .map(UserType::getUserTypeCode)
                 .orElse(null);
     }
 }

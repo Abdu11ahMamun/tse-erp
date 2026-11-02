@@ -50,11 +50,11 @@ public class Employee extends BaseEntity {
     @Column(name = "joining_date")
     private LocalDate joiningDate;
 
-    @Column(name = "confirmation_date")
-    private LocalDate confirmationDate;
-
-    @Column(name = "employment_status_id")
-    private Long employmentStatusId;
+//    @Column(name = "confirmation_date")
+//    private LocalDate confirmationDate;
+//
+//    @Column(name = "employment_status_id")
+//    private Long employmentStatusId;
 
     @Column(name = "probationary_period")
     private Integer probationaryPeriod;
@@ -62,8 +62,8 @@ public class Employee extends BaseEntity {
     @Column(name = "notice_period")
     private Integer noticePeriod;
 
-    @Column(name = "separation_date")
-    private LocalDate separationDate;
+//    @Column(name = "separation_date")
+//    private LocalDate separationDate;
 
     @Column(name = "office_in_time")
     private LocalTime officeInTime;
@@ -187,4 +187,25 @@ public class Employee extends BaseEntity {
 
     @Column(name = "national_disability_id", length = 30)
     private String nationalDisabilityId;
+
+    @Column(name = "work_schedule_id")
+    private Long workScheduleId;
+
+    @Column(name = "probation_status_id")
+    private Long probationStatusId;
+
+    @Column(name = "probation_completion_date")
+    private LocalDate probationCompletionDate;
+
+    @Column(name = "employee_status_id")
+    private Long employeeStatusId;
+
+    @Column(name = "resigned_date")
+    private LocalDate resignedDate;
+
+    @Column(name = "sim_owner", length = 100)
+    private String simOwner;
+
+    @Column(name = "email_owner", length = 100)
+    private String emailOwner;
 }

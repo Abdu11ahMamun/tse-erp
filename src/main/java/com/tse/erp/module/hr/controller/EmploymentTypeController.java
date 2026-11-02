@@ -17,9 +17,12 @@ public class EmploymentTypeController {
     private final EmploymentTypeService employmentTypeService;
 
     @GetMapping
-    public ResponseEntity<List<EmploymentType>> getAllEmploymentTypes() {
-        return ResponseEntity.ok(
-                employmentTypeService.getAllEmploymentTypes());
+    public ResponseEntity<List<EmploymentType>> getAllEmploymentTypes(
+            @RequestParam(required = false) Long bgId,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "false") boolean activeOnly) {
+        return ResponseEntity.ok(employmentTypeService
+                .getAllEmploymentTypes(bgId, category, activeOnly));
     }
 
     @GetMapping("/{id}")
@@ -32,8 +35,7 @@ public class EmploymentTypeController {
     @PostMapping
     public ResponseEntity<EmploymentType> createEmploymentType(
             @RequestBody EmploymentType employmentType) {
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
+        return ResponseEntity.status(HttpStatus.CREATED)
                 .body(employmentTypeService
                         .createEmploymentType(employmentType));
     }
@@ -42,14 +44,12 @@ public class EmploymentTypeController {
     public ResponseEntity<EmploymentType> updateEmploymentType(
             @PathVariable Long id,
             @RequestBody EmploymentType employmentType) {
-        return ResponseEntity.ok(
-                employmentTypeService
-                        .updateEmploymentType(id, employmentType));
+        return ResponseEntity.ok(employmentTypeService
+                .updateEmploymentType(id, employmentType));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEmploymentType(
-            @PathVariable Long id) {
+    public ResponseEntity<Void> deleteEmploymentType(@PathVariable Long id) {
         employmentTypeService.deleteEmploymentType(id);
         return ResponseEntity.noContent().build();
     }

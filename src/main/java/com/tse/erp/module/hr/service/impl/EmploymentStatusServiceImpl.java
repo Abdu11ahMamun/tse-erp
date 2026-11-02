@@ -131,11 +131,6 @@ public class EmploymentStatusServiceImpl implements EmploymentStatusService {
     public void deleteEmploymentStatus(Long id) {
         EmploymentStatus existing = getEmploymentStatusById(id);
 
-        if (employeeRepository.existsByEmploymentStatusId(id)) {
-            throw new BadRequestException(
-                    "Cannot delete: Employees use this Employment Status");
-        }
-
         employmentStatusRepository.delete(existing);
     }
 

@@ -6,12 +6,14 @@ import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.entity.BusinessUnit;
+import com.tse.erp.module.admin.entity.UserEmplMap;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
+import com.tse.erp.module.admin.repository.UserEmplMapRepository;
+import com.tse.erp.module.asset.repository.AssetReceiveRepository;
 import com.tse.erp.module.hr.entity.Department;
 import com.tse.erp.module.hr.entity.Designation;
 import com.tse.erp.module.hr.entity.Employee;
-import com.tse.erp.module.hr.entity.EmploymentStatus;
 import com.tse.erp.module.hr.entity.EmploymentType;
 import com.tse.erp.module.hr.entity.LevelOfEducation;
 import com.tse.erp.module.hr.repository.DepartmentGroupRepository;
@@ -19,23 +21,18 @@ import com.tse.erp.module.hr.repository.DepartmentRepository;
 import com.tse.erp.module.hr.repository.DeptDesigMapRepository;
 import com.tse.erp.module.hr.repository.DesignationGroupRepository;
 import com.tse.erp.module.hr.repository.DesignationRepository;
-import com.tse.erp.module.hr.repository.EmployeeRepository;
-import com.tse.erp.module.hr.repository.EmploymentStatusRepository;
-import com.tse.erp.module.hr.repository.EmploymentTypeRepository;
-import com.tse.erp.module.hr.repository.LevelOfEducationRepository;
-import com.tse.erp.module.hr.service.EmployeeService;
-import com.tse.erp.module.hr.validation.HrLookupValidator;
-import com.tse.erp.module.admin.entity.UserEmplMap;
-import com.tse.erp.module.admin.repository.UserEmplMapRepository;
-import com.tse.erp.module.asset.repository.AssetReceiveRepository;
 import com.tse.erp.module.hr.repository.EmpAttConfigRepository;
 import com.tse.erp.module.hr.repository.EmployeeCertificationRepository;
 import com.tse.erp.module.hr.repository.EmployeeEducationRepository;
 import com.tse.erp.module.hr.repository.EmployeeJobExperienceRepository;
 import com.tse.erp.module.hr.repository.EmployeeLeaveRepository;
+import com.tse.erp.module.hr.repository.EmployeeRepository;
 import com.tse.erp.module.hr.repository.EmployeeTrainingRepository;
+import com.tse.erp.module.hr.repository.EmploymentTypeRepository;
+import com.tse.erp.module.hr.repository.LevelOfEducationRepository;
 import com.tse.erp.module.hr.repository.MobileNotificationRepository;
-import java.util.ArrayList;
+import com.tse.erp.module.hr.service.EmployeeService;
+import com.tse.erp.module.hr.validation.HrLookupValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +41,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -63,7 +61,6 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final DesignationGroupRepository designationGroupRepository;
     private final DeptDesigMapRepository deptDesigMapRepository;
     private final EmploymentTypeRepository employmentTypeRepository;
-    private final EmploymentStatusRepository employmentStatusRepository;
     private final LevelOfEducationRepository levelOfEducationRepository;
     private final HrLookupValidator hrLookupValidator;
     private final UserEmplMapRepository userEmplMapRepository;
@@ -129,9 +126,6 @@ public class EmployeeServiceImpl implements EmployeeService {
     // =========================================
     // OFFICE (required: BG/BU, name, department, designation)
     // =========================================
-    // =========================================
-    // OFFICE (required: BG/BU, name, department, designation)
-    // =========================================
     private void validateOffice(
             Employee source, Employee target, Long selfId) {
         validateParents(source.getBgId(), source.getBuId());
@@ -192,72 +186,56 @@ public class EmployeeServiceImpl implements EmployeeService {
                     "Designation is not mapped to selected Department");
         }
 
-        // Employment Type (optional)
+        // Employment Type (ET), Work Schedule (WS), Probation Status (PS)
         if (source.getEmploymentTypeId() != null) {
-            EmploymentType employmentType = employmentTypeRepository
-                    .findById(source.getEmploymentTypeId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Employment Type not found with id: "
-                                    + source.getEmploymentTypeId()));
-            if (!Integer.valueOf(1).equals(employmentType.getStatus())) {
-                throw new BadRequestException(
-                        "Selected Employment Type is not active");
-            }
+            loadEmploymentType(source.getEmploymentTypeId(), "ET",
+                    "Employment Type", bgId);
+        }
+        if (source.getWorkScheduleId() != null) {
+            loadEmploymentType(source.getWorkScheduleId(), "WS",
+                    "Work Schedule", bgId);
+        }
+        if (source.getProbationStatusId() != null) {
+            loadEmploymentType(source.getProbationStatusId(), "PS",
+                    "Probation Status", bgId);
         }
 
-        // Employment Status (optional)
-        boolean separated = false;
-        if (source.getEmploymentStatusId() != null) {
-            EmploymentStatus employmentStatus = employmentStatusRepository
-                    .findById(source.getEmploymentStatusId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Employment Status not found with id: "
-                                    + source.getEmploymentStatusId()));
-            if (!Integer.valueOf(1).equals(employmentStatus.getStatus())) {
-                throw new BadRequestException(
-                        "Selected Employment Status is not active");
-            }
-            // BU match (purono BU-less row-e skip)
-            if (employmentStatus.getBuId() != null
-                    && !buId.equals(employmentStatus.getBuId())) {
-                throw new BadRequestException(
-                        "Employment Status does not belong to selected Business Unit");
-            }
-            String statusName = employmentStatus.getStatusName();
-            separated = statusName != null
-                    && (statusName.equalsIgnoreCase("Resigned")
-                    || statusName.equalsIgnoreCase("Terminated")
-                    || statusName.equalsIgnoreCase("Retired"));
+        // Employee Status (ES): date flag thakle Resigned Date required
+        boolean dateRequired = false;
+        if (source.getEmployeeStatusId() != null) {
+            EmploymentType es = loadEmploymentType(
+                    source.getEmployeeStatusId(), "ES",
+                    "Employee Status", bgId);
+            dateRequired = Boolean.TRUE.equals(es.getIsDateFieldRequired());
         }
 
-        // Dates (optional, order check shudhu duita thakle)
         LocalDate today = LocalDate.now();
         if (source.getJoiningDate() != null
                 && source.getJoiningDate().isAfter(today)) {
             throw new BadRequestException(
                     "Joining date cannot be a future date");
         }
-        if (source.getConfirmationDate() != null
-                && source.getJoiningDate() != null
-                && source.getConfirmationDate().isBefore(source.getJoiningDate())) {
-            throw new BadRequestException(
-                    "Confirmation date cannot be before joining date");
-        }
-        if (separated && source.getSeparationDate() == null) {
-            throw new BadRequestException(
-                    "Separation date is required for the selected Employment Status");
-        }
-        if (source.getSeparationDate() != null
-                && source.getJoiningDate() != null
-                && source.getSeparationDate().isBefore(source.getJoiningDate())) {
-            throw new BadRequestException(
-                    "Separation date cannot be before joining date");
-        }
-        LocalDate separationDate = separated
-                ? source.getSeparationDate() : null;
 
         Integer probationaryPeriod = optInt(
                 source.getProbationaryPeriod(), "Probationary period", 1, 24);
+        // Joining Date + probation (month), request-er value ignore
+        LocalDate probationCompletionDate =
+                (source.getJoiningDate() != null && probationaryPeriod != null)
+                        ? source.getJoiningDate().plusMonths(probationaryPeriod)
+                        : null;
+
+        if (dateRequired && source.getResignedDate() == null) {
+            throw new BadRequestException(
+                    "Resigned date is required for the selected Employee Status");
+        }
+        if (source.getResignedDate() != null
+                && source.getJoiningDate() != null
+                && source.getResignedDate().isBefore(source.getJoiningDate())) {
+            throw new BadRequestException(
+                    "Resigned date cannot be before joining date");
+        }
+        LocalDate resignedDate = dateRequired ? source.getResignedDate() : null;
+
         Integer noticePeriod = optInt(
                 source.getNoticePeriod(), "Notice period", 0, 12);
 
@@ -293,16 +271,39 @@ public class EmployeeServiceImpl implements EmployeeService {
         target.setDeptId(source.getDeptId());
         target.setDesigId(source.getDesigId());
         target.setEmploymentTypeId(source.getEmploymentTypeId());
+        target.setWorkScheduleId(source.getWorkScheduleId());
+        target.setProbationStatusId(source.getProbationStatusId());
         target.setJoiningDate(source.getJoiningDate());
-        target.setConfirmationDate(source.getConfirmationDate());
-        target.setEmploymentStatusId(source.getEmploymentStatusId());
         target.setProbationaryPeriod(probationaryPeriod);
+        target.setProbationCompletionDate(probationCompletionDate);
+        target.setEmployeeStatusId(source.getEmployeeStatusId());
+        target.setResignedDate(resignedDate);
         target.setNoticePeriod(noticePeriod);
-        target.setSeparationDate(separationDate);
         target.setOfficeInTime(source.getOfficeInTime());
         target.setOfficeOutTime(source.getOfficeOutTime());
         target.setOvertimeAllowance(source.getOvertimeAllowance());
         target.setReportingOfficerId(reportingOfficerId);
+    }
+
+    // Employment Type table-er record: active, category match, same BG
+    private EmploymentType loadEmploymentType(
+            Long id, String category, String label, Long bgId) {
+        EmploymentType t = employmentTypeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        label + " not found with id: " + id));
+        if (!Integer.valueOf(1).equals(t.getStatus())) {
+            throw new BadRequestException(
+                    "Selected " + label + " is not active");
+        }
+        if (!category.equals(t.getCategory())) {
+            throw new BadRequestException(
+                    label + " must be a record of category " + category);
+        }
+        if (t.getBgId() == null || !bgId.equals(t.getBgId())) {
+            throw new BadRequestException(
+                    label + " does not belong to selected Business Group");
+        }
+        return t;
     }
 
     // =========================================
@@ -480,17 +481,17 @@ public class EmployeeServiceImpl implements EmployeeService {
         String district = optText(source.getDistrict(), "District", 1, 100);
         String thana = optText(source.getThana(), "Thana", 1, 100);
 
-        // Office mobile (unique)
+        // Contact mobile (officeMobileNo, unique)
         String officeMobileNo = ValidationUtil.optionalPattern(
-                source.getOfficeMobileNo(), "Office mobile no", 11,
+                source.getOfficeMobileNo(), "Contact mobile no", 11,
                 BD_MOBILE,
-                "Invalid office mobile number. Must be 11 digits starting with 01");
+                "Invalid contact mobile number. Must be 11 digits starting with 01");
         if (officeMobileNo != null
                 && employeeRepository.findByOfficeMobileNo(officeMobileNo)
                 .stream()
                 .anyMatch(x -> selfId == null || !x.getId().equals(selfId))) {
             throw new DuplicateResourceException(
-                    "Office mobile no already exists: " + officeMobileNo);
+                    "Contact mobile no already exists: " + officeMobileNo);
         }
 
         // Personal mobile (unique na)
@@ -511,10 +512,10 @@ public class EmployeeServiceImpl implements EmployeeService {
                 "^[0-9+() -]{6,20}$",
                 "Emergency contact allows only digits, +, (, ), space and hyphen (6 to 20 characters)");
 
-        // Office email (unique)
+        // Contact email (officeEmail, unique)
         String officeEmail = ValidationUtil.optionalPattern(
-                source.getOfficeEmail(), "Office email", 150, EMAIL,
-                "Invalid office email format");
+                source.getOfficeEmail(), "Contact email", 150, EMAIL,
+                "Invalid contact email format");
         if (officeEmail != null) {
             officeEmail = officeEmail.toLowerCase(Locale.ROOT);
             final String oe = officeEmail;
@@ -522,7 +523,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                     .anyMatch(x -> selfId == null
                             || !x.getId().equals(selfId))) {
                 throw new DuplicateResourceException(
-                        "Office email already exists: " + oe);
+                        "Contact email already exists: " + oe);
             }
         }
 
@@ -533,6 +534,11 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (personalEmail != null) {
             personalEmail = personalEmail.toLowerCase(Locale.ROOT);
         }
+
+        // SIM / Email owner (optional)
+        String simOwner = optText(source.getSimOwner(), "SIM owner", 1, 100);
+        String emailOwner = optText(
+                source.getEmailOwner(), "Email owner", 1, 100);
 
         target.setPresentAddress(presentAddress);
         target.setPermanentAddress(permanentAddress);
@@ -545,6 +551,8 @@ public class EmployeeServiceImpl implements EmployeeService {
         target.setEmergencyContact(emergencyContact);
         target.setOfficeEmail(officeEmail);
         target.setPersonalEmail(personalEmail);
+        target.setSimOwner(simOwner);
+        target.setEmailOwner(emailOwner);
     }
 
     // =========================================

@@ -26,6 +26,9 @@ public class UserType extends BaseEntity {
     @Column(name = "short_name", length = 100)
     private String shortName;
 
+    @Column(name = "user_type_code", length = 20)
+    private String userTypeCode;
+
     @Column(name = "sort_order", precision = 10, scale = 2)
     private java.math.BigDecimal sortOrder;
 }

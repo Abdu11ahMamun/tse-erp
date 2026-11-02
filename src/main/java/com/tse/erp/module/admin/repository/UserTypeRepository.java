@@ -14,4 +14,6 @@ public interface UserTypeRepository
     List<UserType> findByTypeNameIgnoreCase(String typeName);
 
     List<UserType> findByShortNameIgnoreCase(String shortName);
+
+    List<UserType> findByBgIdAndUserTypeCodeIgnoreCase(Long bgId, String userTypeCode);
 }

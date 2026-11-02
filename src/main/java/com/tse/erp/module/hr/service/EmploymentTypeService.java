@@ -6,14 +6,14 @@ import java.util.List;
 
 public interface EmploymentTypeService {
 
-    List<EmploymentType> getAllEmploymentTypes();
+    List<EmploymentType> getAllEmploymentTypes(
+            Long bgId, String category, boolean activeOnly);
 
     EmploymentType getEmploymentTypeById(Long id);
 
     EmploymentType createEmploymentType(EmploymentType employmentType);
 
-    EmploymentType updateEmploymentType(
-            Long id, EmploymentType employmentType);
+    EmploymentType updateEmploymentType(Long id, EmploymentType employmentType);
 
     void deleteEmploymentType(Long id);
 }

@@ -42,6 +42,8 @@ public class UserTypeServiceImpl implements UserTypeService {
 
         String name = userType.getTypeName().trim();
         String shortName = normalizeShortName(userType.getShortName());
+        String code = validateUserTypeCode(
+                userType.getUserTypeCode(), userType.getBgId(), null);
 
         if (!userTypeRepository.findByTypeNameIgnoreCase(name).isEmpty()) {
             throw new DuplicateResourceException(
@@ -57,6 +59,7 @@ public class UserTypeServiceImpl implements UserTypeService {
         userType.setId(null);
         userType.setTypeName(name);
         userType.setShortName(shortName);
+        userType.setUserTypeCode(code);
 
         // Status default 1 — BaseEntity @PrePersist handle korbe
         return userTypeRepository.save(userType);
@@ -74,6 +77,8 @@ public class UserTypeServiceImpl implements UserTypeService {
 
         String name = userType.getTypeName().trim();
         String shortName = normalizeShortName(userType.getShortName());
+        String code = validateUserTypeCode(
+                userType.getUserTypeCode(), userType.getBgId(), id);
 
         boolean nameDuplicate = userTypeRepository
                 .findByTypeNameIgnoreCase(name).stream()
@@ -96,6 +101,7 @@ public class UserTypeServiceImpl implements UserTypeService {
         existing.setBgId(userType.getBgId());
         existing.setTypeName(name);
         existing.setShortName(shortName);
+        existing.setUserTypeCode(code);
         existing.setSortOrder(userType.getSortOrder());
         if (userType.getStatus() != null) {
             existing.setStatus(userType.getStatus());
@@ -151,5 +157,29 @@ public class UserTypeServiceImpl implements UserTypeService {
 
     private void validateSortOrder(java.math.BigDecimal sortOrder) {
         ValidationUtil.validateSortOrder(sortOrder);
+    }
+
+    // Optional. 2-20, A-Z 0-9 _ -, BG-er moddhe unique, uppercase save hoy
+    private String validateUserTypeCode(String v, Long bgId, Long selfId) {
+        if (v == null || v.trim().isEmpty()) {
+            return null;
+        }
+        String c = v.trim().toUpperCase(java.util.Locale.ROOT);
+        if (c.length() < 2 || c.length() > 20) {
+            throw new BadRequestException(
+                    "User type code must be between 2 and 20 characters");
+        }
+        if (!c.matches("^[A-Z0-9_-]+$")) {
+            throw new BadRequestException(
+                    "User type code allows only letters, digits, underscore and hyphen");
+        }
+        boolean dup = userTypeRepository
+                .findByBgIdAndUserTypeCodeIgnoreCase(bgId, c).stream()
+                .anyMatch(x -> selfId == null || !x.getId().equals(selfId));
+        if (dup) {
+            throw new DuplicateResourceException(
+                    "User type code already exists: " + c);
+        }
+        return c;
     }
 }

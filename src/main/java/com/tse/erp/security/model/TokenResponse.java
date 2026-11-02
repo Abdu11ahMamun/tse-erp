@@ -11,6 +11,7 @@ public class TokenResponse {
 
     private String accessToken;
     private String tokenType;
+    private String userTypeCode;
     private long expiresIn;
     private String username;
     private String role;
@@ -18,4 +19,5 @@ public class TokenResponse {
     private Long userEmpId;
     private Long bgId;
     private Long buId;
+    private Long employeeId;
 }

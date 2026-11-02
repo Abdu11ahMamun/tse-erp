@@ -5,25 +5,53 @@ import com.tse.erp.common.ValidationUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
+import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.hr.entity.EmploymentType;
+import com.tse.erp.module.hr.repository.EmployeeRepository;
 import com.tse.erp.module.hr.repository.EmploymentTypeRepository;
 import com.tse.erp.module.hr.service.EmploymentTypeService;
+import com.tse.erp.security.AuthUser;
+import com.tse.erp.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-public class EmploymentTypeServiceImpl
-        implements EmploymentTypeService {
+public class EmploymentTypeServiceImpl implements EmploymentTypeService {
+
+    private static final Set<String> CATEGORIES =
+            Set.of("ET", "WS", "PS", "ES");
 
     private final EmploymentTypeRepository employmentTypeRepository;
+    private final BusinessGroupRepository businessGroupRepository;
+    private final EmployeeRepository employeeRepository;
 
     @Override
-    public List<EmploymentType> getAllEmploymentTypes() {
-        return employmentTypeRepository
-                .findAllByOrderBySortOrderAscIdAsc();
+    public List<EmploymentType> getAllEmploymentTypes(
+            Long bgId, String category, boolean activeOnly) {
+
+        // bgId na dile logged-in user-er BG (onno group-er data leak na hoy)
+        Long effectiveBgId = bgId != null
+                ? bgId
+                : CurrentUser.get().map(AuthUser::bgId).orElse(null);
+
+        String cat = (category == null || category.isBlank())
+                ? null : normalizeCategory(category);
+
+        List<EmploymentType> list = effectiveBgId == null
+                ? employmentTypeRepository.findAllByOrderBySortOrderAscIdAsc()
+                : employmentTypeRepository
+                .findByBgIdOrderBySortOrderAscIdAsc(effectiveBgId);
+
+        return list.stream()
+                .filter(t -> cat == null || cat.equals(t.getCategory()))
+                .filter(t -> !activeOnly
+                        || Integer.valueOf(1).equals(t.getStatus()))
+                .toList();
     }
 
     @Override
@@ -34,83 +62,46 @@ public class EmploymentTypeServiceImpl
     }
 
     @Override
-    public EmploymentType createEmploymentType(
-            EmploymentType employmentType) {
-        validateTypeName(employmentType.getTypeName());
-        validateShortName(employmentType.getShortName());
-        validateSortOrder(employmentType.getSortOrder());
-        StatusUtil.validate(employmentType.getStatus());
+    public EmploymentType createEmploymentType(EmploymentType t) {
 
-        String typeName = employmentType.getTypeName().trim();
-        String shortName = normalizeShortName(
-                employmentType.getShortName());
+        prepare(t);
+        StatusUtil.validate(t.getStatus());
+        checkDuplicate(t, null);
 
-        boolean typeNameExists = !employmentTypeRepository
-                .findByTypeNameIgnoreCase(typeName)
-                .isEmpty();
-        if (typeNameExists) {
-            throw new DuplicateResourceException(
-                    "Employment Type already exists: " + typeName);
-        }
-
-        if (shortName != null) {
-            boolean shortNameExists = !employmentTypeRepository
-                    .findByShortNameIgnoreCase(shortName)
-                    .isEmpty();
-            if (shortNameExists) {
-                throw new DuplicateResourceException(
-                        "Short name already exists: " + shortName);
-            }
-        }
-
-        employmentType.setId(null);
-        employmentType.setTypeName(typeName);
-        employmentType.setShortName(shortName);
-
-        return employmentTypeRepository.save(employmentType);
+        t.setId(null);
+        // Status default 1, BaseEntity @PrePersist handle korbe
+        return employmentTypeRepository.save(t);
     }
 
     @Override
-    public EmploymentType updateEmploymentType(
-            Long id, EmploymentType employmentType) {
+    public EmploymentType updateEmploymentType(Long id, EmploymentType t) {
+
         EmploymentType existing = getEmploymentTypeById(id);
 
-        validateTypeName(employmentType.getTypeName());
-        validateShortName(employmentType.getShortName());
-        validateSortOrder(employmentType.getSortOrder());
-        StatusUtil.validate(employmentType.getStatus());
+        prepare(t);
+        StatusUtil.validate(t.getStatus());
 
-        String typeName = employmentType.getTypeName().trim();
-        String shortName = normalizeShortName(
-                employmentType.getShortName());
-
-        boolean typeNameDuplicate = employmentTypeRepository
-                .findByTypeNameIgnoreCase(typeName)
-                .stream()
-                .anyMatch(x -> !x.getId().equals(id));
-        if (typeNameDuplicate) {
-            throw new DuplicateResourceException(
-                    "Employment Type already exists: " + typeName);
+        // Employee-te use hoye thakte pare, tai BG/category badla jabe na
+        if (existing.getBgId() != null
+                && !existing.getBgId().equals(t.getBgId())) {
+            throw new BadRequestException("Business Group cannot be changed");
         }
-
-        if (shortName != null) {
-            boolean shortNameDuplicate = employmentTypeRepository
-                    .findByShortNameIgnoreCase(shortName)
-                    .stream()
-                    .anyMatch(x -> !x.getId().equals(id));
-            if (shortNameDuplicate) {
-                throw new DuplicateResourceException(
-                        "Short name already exists: " + shortName);
-            }
+        if (existing.getCategory() != null
+                && !existing.getCategory().equals(t.getCategory())) {
+            throw new BadRequestException("Category cannot be changed");
         }
+        checkDuplicate(t, id);
 
-        existing.setTypeName(typeName);
-        existing.setShortName(shortName);
-        existing.setSortOrder(employmentType.getSortOrder());
-        if (employmentType.getStatus() != null) {
-            existing.setStatus(employmentType.getStatus());
+        existing.setBgId(t.getBgId());
+        existing.setCategory(t.getCategory());
+        existing.setTypeName(t.getTypeName());
+        existing.setShortName(t.getShortName());
+        existing.setSortOrder(t.getSortOrder());
+        existing.setIsDateFieldRequired(t.getIsDateFieldRequired());
+        existing.setDateFieldLabel(t.getDateFieldLabel());
+        if (t.getStatus() != null) {
+            existing.setStatus(t.getStatus());
         }
-
         return employmentTypeRepository.save(existing);
     }
 
@@ -118,47 +109,121 @@ public class EmploymentTypeServiceImpl
     public void deleteEmploymentType(Long id) {
         EmploymentType existing = getEmploymentTypeById(id);
 
-        // TODO: block delete when Employees use this type, after Employee module exists.
+        if (employeeRepository.existsByEmploymentTypeId(id)
+                || employeeRepository.existsByWorkScheduleId(id)
+                || employeeRepository.existsByProbationStatusId(id)
+                || employeeRepository.existsByEmployeeStatusId(id)) {
+            throw new BadRequestException(
+                    "Cannot delete: Employees use this record");
+        }
         employmentTypeRepository.delete(existing);
     }
 
-    private void validateTypeName(String typeName) {
-        if (typeName == null || typeName.trim().isEmpty()) {
-            throw new BadRequestException(
-                    "Type name cannot be empty");
+    // =========================================
+    // VALIDATE + CLEAN
+    // =========================================
+    private void prepare(EmploymentType t) {
+
+        if (t.getBgId() == null) {
+            throw new BadRequestException("Business Group id cannot be empty");
         }
-        if (typeName.trim().length() < 2) {
+        businessGroupRepository.findById(t.getBgId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Business Group not found with id: " + t.getBgId()));
+
+        if (t.getCategory() == null || t.getCategory().isBlank()) {
+            throw new BadRequestException("Category cannot be empty");
+        }
+        t.setCategory(normalizeCategory(t.getCategory()));
+
+        if (t.getTypeName() == null || t.getTypeName().trim().isEmpty()) {
+            throw new BadRequestException("Type name cannot be empty");
+        }
+        String name = t.getTypeName().trim();
+        if (name.length() < 2) {
             throw new BadRequestException(
                     "Type name must be at least 2 characters");
         }
-        if (typeName.trim().length() > 50) {
+        if (name.length() > 50) {
             throw new BadRequestException(
                     "Type name cannot exceed 50 characters");
         }
+        t.setTypeName(name);
+
+        // Short name optional
+        String shortName = null;
+        if (t.getShortName() != null && !t.getShortName().trim().isEmpty()) {
+            shortName = t.getShortName().trim();
+            if (shortName.length() < 2) {
+                throw new BadRequestException(
+                        "Short name must be at least 2 characters");
+            }
+            if (shortName.length() > 100) {
+                throw new BadRequestException(
+                        "Short name cannot exceed 100 characters");
+            }
+        }
+        t.setShortName(shortName);
+
+        ValidationUtil.validateSortOrder(t.getSortOrder());
+
+        // Date field
+        boolean dateRequired = Boolean.TRUE.equals(t.getIsDateFieldRequired());
+        t.setIsDateFieldRequired(dateRequired);
+        if (dateRequired) {
+            if (t.getDateFieldLabel() == null
+                    || t.getDateFieldLabel().trim().isEmpty()) {
+                throw new BadRequestException(
+                        "Date field label is required when date field is required");
+            }
+            String label = t.getDateFieldLabel().trim();
+            if (label.length() < 2 || label.length() > 50) {
+                throw new BadRequestException(
+                        "Date field label must be between 2 and 50 characters");
+            }
+            if (label.indexOf('<') >= 0 || label.indexOf('>') >= 0) {
+                throw new BadRequestException(
+                        "Date field label contains unsupported characters");
+            }
+            t.setDateFieldLabel(label);
+        } else {
+            t.setDateFieldLabel(null);
+        }
     }
 
-    private void validateShortName(String shortName) {
-        if (shortName == null || shortName.trim().isEmpty()) {
-            return;
-        }
-        if (shortName.trim().length() < 2) {
+    private String normalizeCategory(String c) {
+        String v = c.trim().toUpperCase(Locale.ROOT);
+        if (!CATEGORIES.contains(v)) {
             throw new BadRequestException(
-                    "Short name must be at least 2 characters");
+                    "Category must be one of ET, WS, PS, ES");
         }
-        if (shortName.trim().length() > 100) {
-            throw new BadRequestException(
-                    "Short name cannot exceed 100 characters");
-        }
+        return v;
     }
 
-    private String normalizeShortName(String shortName) {
-        if (shortName == null || shortName.trim().isEmpty()) {
-            return null;
+    // Unique: BG + category-r moddhe, case-insensitive
+    private void checkDuplicate(EmploymentType t, Long selfId) {
+        boolean nameDup = employmentTypeRepository
+                .findByBgIdAndCategoryAndTypeNameIgnoreCase(
+                        t.getBgId(), t.getCategory(), t.getTypeName())
+                .stream()
+                .anyMatch(x -> selfId == null || !x.getId().equals(selfId));
+        if (nameDup) {
+            throw new DuplicateResourceException(
+                    "Type name already exists in this category: "
+                            + t.getTypeName());
         }
-        return shortName.trim();
-    }
-
-    private void validateSortOrder(java.math.BigDecimal sortOrder) {
-        ValidationUtil.validateSortOrder(sortOrder);
+        if (t.getShortName() != null) {
+            boolean shortDup = employmentTypeRepository
+                    .findByBgIdAndCategoryAndShortNameIgnoreCase(
+                            t.getBgId(), t.getCategory(), t.getShortName())
+                    .stream()
+                    .anyMatch(x -> selfId == null
+                            || !x.getId().equals(selfId));
+            if (shortDup) {
+                throw new DuplicateResourceException(
+                        "Short name already exists in this category: "
+                                + t.getShortName());
+            }
+        }
     }
 }

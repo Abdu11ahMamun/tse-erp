@@ -12,7 +12,11 @@ public interface EmploymentTypeRepository
 
     List<EmploymentType> findAllByOrderBySortOrderAscIdAsc();
 
-    List<EmploymentType> findByTypeNameIgnoreCase(String typeName);
+    List<EmploymentType> findByBgIdOrderBySortOrderAscIdAsc(Long bgId);
 
-    List<EmploymentType> findByShortNameIgnoreCase(String shortName);
+    List<EmploymentType> findByBgIdAndCategoryAndTypeNameIgnoreCase(
+            Long bgId, String category, String typeName);
+
+    List<EmploymentType> findByBgIdAndCategoryAndShortNameIgnoreCase(
+            Long bgId, String category, String shortName);
 }

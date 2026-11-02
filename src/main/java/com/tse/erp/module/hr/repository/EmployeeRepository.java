@@ -21,9 +21,7 @@ public interface EmployeeRepository
     List<Employee> findByDrivingLicenseNoIgnoreCase(String drivingLicenseNo);
 
     List<Employee> findByNationalDisabilityIdIgnoreCase(String nationalDisabilityId);
-
-    boolean existsByEmploymentStatusId(Long employmentStatusId);
-
+    
     List<Employee> findByOfficeMobileNo(String officeMobileNo);
 
     List<Employee> findByOfficeEmailIgnoreCase(String officeEmail);
@@ -31,4 +29,12 @@ public interface EmployeeRepository
     List<Employee> findByEmployeeCodeIgnoreCase(String employeeCode);
 
     boolean existsByReportingOfficerId(Long reportingOfficerId);
+
+    boolean existsByEmploymentTypeId(Long id);
+
+    boolean existsByWorkScheduleId(Long id);
+
+    boolean existsByProbationStatusId(Long id);
+
+    boolean existsByEmployeeStatusId(Long id);
 }
