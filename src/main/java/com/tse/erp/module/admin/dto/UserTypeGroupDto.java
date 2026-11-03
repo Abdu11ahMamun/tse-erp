@@ -14,4 +14,5 @@ public class UserTypeGroupDto {
     private Long userTypeId;
     private Long bgId;
     private List<UserTypeGroupRowDto> businessUnits;
+    private String userTypeCode;
 }

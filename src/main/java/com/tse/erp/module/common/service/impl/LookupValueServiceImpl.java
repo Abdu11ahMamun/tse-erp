@@ -78,14 +78,6 @@ public class LookupValueServiceImpl
             throw new DuplicateResourceException(
                     "Lookup Value already exists: " + value);
         }
-        if (valueCode != null && !lookupValueRepository
-            .findByTypeIdAndValueCodeIgnoreCase(
-                    lookupValue.getTypeId(), valueCode)
-            .isEmpty()) {
-            throw new DuplicateResourceException(
-                "Value code already exists: " + valueCode);
-        }
-
         lookupValue.setId(null);
         lookupValue.setValue(value);
         lookupValue.setTypeCode(typeCode);
@@ -125,17 +117,6 @@ public class LookupValueServiceImpl
             throw new DuplicateResourceException(
                     "Lookup Value already exists: " + value);
         }
-        boolean valueCodeDuplicate = valueCode != null
-                && lookupValueRepository
-                        .findByTypeIdAndValueCodeIgnoreCase(
-                                lookupValue.getTypeId(), valueCode)
-                        .stream()
-                        .anyMatch(x -> !x.getId().equals(id));
-        if (valueCodeDuplicate) {
-            throw new DuplicateResourceException(
-                    "Value code already exists: " + valueCode);
-        }
-
         existing.setBgId(lookupValue.getBgId());
         existing.setBuId(lookupValue.getBuId());
         existing.setTypeId(lookupValue.getTypeId());

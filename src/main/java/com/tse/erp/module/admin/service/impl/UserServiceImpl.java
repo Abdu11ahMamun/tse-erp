@@ -7,10 +7,7 @@ import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.entity.User;
 import com.tse.erp.module.admin.entity.UserEmplMap;
-import com.tse.erp.module.admin.repository.BusinessGroupRepository;
-import com.tse.erp.module.admin.repository.BusinessUnitRepository;
-import com.tse.erp.module.admin.repository.UserEmplMapRepository;
-import com.tse.erp.module.admin.repository.UserRepository;
+import com.tse.erp.module.admin.repository.*;
 import com.tse.erp.module.admin.service.UserService;
 import com.tse.erp.module.hr.entity.Employee;
 import com.tse.erp.module.hr.repository.EmployeeRepository;
@@ -37,11 +34,16 @@ public class UserServiceImpl implements UserService {
     private final UserEmplMapRepository userEmplMapRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
+    private final UserTypeRepository userTypeRepository;
 
     @Override
     public List<User> getAllUsers() {
         List<User> list = userRepository.findAllByOrderByIdDesc();
         attachEmployeeIds(list);
+        Map<Long, String> codes = new HashMap<>();
+        userTypeRepository.findAll()
+                .forEach(t -> codes.put(t.getId(), t.getUserTypeCode()));
+        list.forEach(u -> u.setUserTypeCode(codes.get(u.getUserTypeId())));
         return list;
     }
 
@@ -383,5 +385,13 @@ public class UserServiceImpl implements UserService {
                         "Business Unit does not belong to selected Business Group");
             }
         }
+    }
+
+    private void attachUserTypeCode(User u) {
+        if (u.getUserTypeId() == null) {
+            return;
+        }
+        userTypeRepository.findById(u.getUserTypeId())
+                .ifPresent(t -> u.setUserTypeCode(t.getUserTypeCode()));
     }
 }

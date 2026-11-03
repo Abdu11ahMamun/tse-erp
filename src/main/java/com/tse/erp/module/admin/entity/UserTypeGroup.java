@@ -23,6 +23,9 @@ public class UserTypeGroup extends BaseEntity {
     @Column(name = "user_type_id", nullable = false)
     private Long userTypeId;
 
+    @Transient
+    private String userTypeCode;
+
     @Column(name = "bu_id", nullable = false)
     private Long buId;
 }

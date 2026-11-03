@@ -50,6 +50,7 @@ public class UserTypeGroupServiceImpl implements UserTypeGroupService {
         dto.setUserTypeId(userType.getId());
         dto.setBgId(userType.getBgId());
         dto.setBusinessUnits(rows);
+        dto.setUserTypeCode(userType.getUserTypeCode());
         return dto;
     }
 

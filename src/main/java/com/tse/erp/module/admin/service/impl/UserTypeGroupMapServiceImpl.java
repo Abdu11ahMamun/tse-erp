@@ -29,25 +29,29 @@ public class UserTypeGroupMapServiceImpl
 
     @Override
     public List<UserTypeGroup> getAll(Long userTypeId, Long buId) {
+        List<UserTypeGroup> list;
         if (userTypeId != null && buId != null) {
-            return userTypeGroupRepository
+            list = userTypeGroupRepository
                     .findByUserTypeIdAndBuId(userTypeId, buId);
-        }
-        if (userTypeId != null) {
-            return userTypeGroupRepository
+        } else if (userTypeId != null) {
+            list = userTypeGroupRepository
                     .findByUserTypeIdOrderByIdAsc(userTypeId);
+        } else if (buId != null) {
+            list = userTypeGroupRepository.findByBuIdOrderByIdDesc(buId);
+        } else {
+            list = userTypeGroupRepository.findAllByOrderByIdDesc();
         }
-        if (buId != null) {
-            return userTypeGroupRepository.findByBuIdOrderByIdDesc(buId);
-        }
-        return userTypeGroupRepository.findAllByOrderByIdDesc();
+        attachCodes(list);
+        return list;
     }
 
     @Override
     public UserTypeGroup getById(Long id) {
-        return userTypeGroupRepository.findById(id)
+        UserTypeGroup row = userTypeGroupRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User Type Group not found with id: " + id));
+        attachCodes(List.of(row));
+        return row;
     }
 
     @Override
@@ -60,7 +64,9 @@ public class UserTypeGroupMapServiceImpl
                     "This User Type is already mapped to the selected Business Unit");
         }
         row.setId(null);
-        return userTypeGroupRepository.save(row);
+        UserTypeGroup saved = userTypeGroupRepository.save(row);
+        attachCodes(List.of(saved));
+        return saved;
     }
 
     @Override
@@ -84,7 +90,9 @@ public class UserTypeGroupMapServiceImpl
         if (row.getStatus() != null) {
             existing.setStatus(row.getStatus());
         }
-        return userTypeGroupRepository.save(existing);
+        UserTypeGroup saved = userTypeGroupRepository.save(existing);
+        attachCodes(List.of(saved));
+        return saved;
     }
 
     @Override
@@ -137,5 +145,15 @@ public class UserTypeGroupMapServiceImpl
             throw new BadRequestException(
                     "Selected Business Unit is not active");
         }
+    }
+
+    private void attachCodes(List<UserTypeGroup> rows) {
+        java.util.Map<Long, String> codes = new java.util.HashMap<>();
+        for (UserTypeGroup r : rows) {
+            codes.computeIfAbsent(r.getUserTypeId(), id ->
+                    userTypeRepository.findById(id)
+                            .map(UserType::getUserTypeCode).orElse(null));
+        }
+        rows.forEach(r -> r.setUserTypeCode(codes.get(r.getUserTypeId())));
     }
 }

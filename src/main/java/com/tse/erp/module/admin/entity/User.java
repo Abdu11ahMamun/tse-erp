@@ -71,4 +71,7 @@ public class User extends BaseEntity {
 
     @Transient
     private Long employeeId;
+
+    @Transient
+    private String userTypeCode;
 }
