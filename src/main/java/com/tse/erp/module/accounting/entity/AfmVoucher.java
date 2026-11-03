@@ -30,6 +30,9 @@ public class AfmVoucher extends BaseEntity {
     @Column(name = "VOUCHER_DATE")
     private LocalDate voucherDate;
 
+    @Column(name = "VOUCHER_TYPE_ID")
+    private Long voucherTypeId;
+
     @Column(name = "VOUCHER_TYPE", length = 50)
     private String voucherType;
 
@@ -39,11 +42,17 @@ public class AfmVoucher extends BaseEntity {
     @Column(name = "LOCATION_ID")
     private Long locationId;
 
+    @Column(name = "PAYMENT_TYPE_ID")
+    private Long paymentTypeId;
+
     @Column(name = "PAYMENT_TYPE", length = 50)
     private String paymentType;
 
     @Column(name = "PAYMENT_TO", length = 200)
     private String paymentTo;
+
+    @Column(name = "PAYMENT_THROUGH_ID")
+    private Long paymentThroughId;
 
     @Column(name = "PAYMENT_THROUGH", length = 50)
     private String paymentThrough;

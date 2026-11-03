@@ -6,13 +6,20 @@ import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.accounting.dto.*;
+import com.tse.erp.module.accounting.entity.AfmChartOfAccounts;
+import com.tse.erp.module.accounting.entity.AfmCostCenter;
+import com.tse.erp.module.accounting.entity.AfmLookupValue;
 import com.tse.erp.module.accounting.entity.AfmVoucher;
 import com.tse.erp.module.accounting.entity.AfmVoucherAttach;
 import com.tse.erp.module.accounting.entity.AfmVoucherDetail;
+import com.tse.erp.module.accounting.repository.AfmChartOfAccountsRepository;
+import com.tse.erp.module.accounting.repository.AfmCostCenterRepository;
+import com.tse.erp.module.accounting.repository.AfmLookupValueRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherAttachRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherDetailRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherRepository;
 import com.tse.erp.module.accounting.service.AfmVoucherService;
+import com.tse.erp.module.admin.entity.BusinessGroup;
 import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
@@ -33,6 +40,9 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
     private final AfmVoucherAttachRepository voucherAttachRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
+    private final AfmLookupValueRepository lookupValueRepository;
+    private final AfmChartOfAccountsRepository chartOfAccountsRepository;
+    private final AfmCostCenterRepository costCenterRepository;
 
     @Override
     public List<AfmVoucherResponseDto> getAllVouchers(Long bgId, Long buId, String voucherType, Integer status, LocalDate fromDate, LocalDate toDate) {
@@ -90,16 +100,43 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
             }
         }
 
+        Long voucherTypeId = request.getVoucherTypeId();
+        String voucherType = request.getVoucherType() != null ? request.getVoucherType().trim() : null;
+        if (voucherTypeId != null && (voucherType == null || voucherType.isEmpty())) {
+            voucherType = lookupValueRepository.findById(voucherTypeId)
+                    .map(AfmLookupValue::getValue)
+                    .orElse(null);
+        }
+
+        Long paymentTypeId = request.getPaymentTypeId();
+        String paymentType = request.getPaymentType() != null ? request.getPaymentType().trim() : null;
+        if (paymentTypeId != null && (paymentType == null || paymentType.isEmpty())) {
+            paymentType = lookupValueRepository.findById(paymentTypeId)
+                    .map(AfmLookupValue::getValue)
+                    .orElse(null);
+        }
+
+        Long paymentThroughId = request.getPaymentThroughId();
+        String paymentThrough = request.getPaymentThrough() != null ? request.getPaymentThrough().trim() : null;
+        if (paymentThroughId != null && (paymentThrough == null || paymentThrough.isEmpty())) {
+            paymentThrough = lookupValueRepository.findById(paymentThroughId)
+                    .map(AfmLookupValue::getValue)
+                    .orElse(null);
+        }
+
         AfmVoucher voucher = AfmVoucher.builder()
                 .bgId(request.getBgId())
                 .buId(request.getBuId())
                 .voucherDate(request.getVoucherDate() != null ? request.getVoucherDate() : LocalDate.now())
-                .voucherType(request.getVoucherType() != null ? request.getVoucherType().trim() : null)
+                .voucherTypeId(voucherTypeId)
+                .voucherType(voucherType)
                 .voucherNo(voucherNo)
                 .locationId(request.getLocationId())
-                .paymentType(request.getPaymentType() != null ? request.getPaymentType().trim() : null)
+                .paymentTypeId(paymentTypeId)
+                .paymentType(paymentType)
                 .paymentTo(request.getPaymentTo() != null ? request.getPaymentTo().trim() : null)
-                .paymentThrough(request.getPaymentThrough() != null ? request.getPaymentThrough().trim() : null)
+                .paymentThroughId(paymentThroughId)
+                .paymentThrough(paymentThrough)
                 .periodName(request.getPeriodName() != null ? request.getPeriodName().trim() : null)
                 .voucherAmount(request.getVoucherAmount() != null ? request.getVoucherAmount() : BigDecimal.ZERO)
                 .voucherSource(request.getVoucherSource() != null ? request.getVoucherSource().trim() : null)
@@ -163,15 +200,42 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
             }
         }
 
+        Long voucherTypeId = request.getVoucherTypeId();
+        String voucherType = request.getVoucherType() != null ? request.getVoucherType().trim() : null;
+        if (voucherTypeId != null && (voucherType == null || voucherType.isEmpty())) {
+            voucherType = lookupValueRepository.findById(voucherTypeId)
+                    .map(AfmLookupValue::getValue)
+                    .orElse(existing.getVoucherType());
+        }
+
+        Long paymentTypeId = request.getPaymentTypeId();
+        String paymentType = request.getPaymentType() != null ? request.getPaymentType().trim() : null;
+        if (paymentTypeId != null && (paymentType == null || paymentType.isEmpty())) {
+            paymentType = lookupValueRepository.findById(paymentTypeId)
+                    .map(AfmLookupValue::getValue)
+                    .orElse(existing.getPaymentType());
+        }
+
+        Long paymentThroughId = request.getPaymentThroughId();
+        String paymentThrough = request.getPaymentThrough() != null ? request.getPaymentThrough().trim() : null;
+        if (paymentThroughId != null && (paymentThrough == null || paymentThrough.isEmpty())) {
+            paymentThrough = lookupValueRepository.findById(paymentThroughId)
+                    .map(AfmLookupValue::getValue)
+                    .orElse(existing.getPaymentThrough());
+        }
+
         existing.setBgId(request.getBgId());
         existing.setBuId(request.getBuId());
         if (request.getVoucherDate() != null) existing.setVoucherDate(request.getVoucherDate());
-        existing.setVoucherType(request.getVoucherType() != null ? request.getVoucherType().trim() : null);
+        existing.setVoucherTypeId(voucherTypeId != null ? voucherTypeId : existing.getVoucherTypeId());
+        if (voucherType != null) existing.setVoucherType(voucherType);
         existing.setVoucherNo(voucherNo);
         existing.setLocationId(request.getLocationId());
-        existing.setPaymentType(request.getPaymentType() != null ? request.getPaymentType().trim() : null);
+        existing.setPaymentTypeId(paymentTypeId != null ? paymentTypeId : existing.getPaymentTypeId());
+        if (paymentType != null) existing.setPaymentType(paymentType);
         existing.setPaymentTo(request.getPaymentTo() != null ? request.getPaymentTo().trim() : null);
-        existing.setPaymentThrough(request.getPaymentThrough() != null ? request.getPaymentThrough().trim() : null);
+        existing.setPaymentThroughId(paymentThroughId != null ? paymentThroughId : existing.getPaymentThroughId());
+        if (paymentThrough != null) existing.setPaymentThrough(paymentThrough);
         existing.setPeriodName(request.getPeriodName() != null ? request.getPeriodName().trim() : null);
         if (request.getVoucherAmount() != null) existing.setVoucherAmount(request.getVoucherAmount());
         existing.setVoucherSource(request.getVoucherSource() != null ? request.getVoucherSource().trim() : null);
@@ -398,16 +462,53 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
                 .map(this::toAttachDto)
                 .toList();
 
+        String groupName = businessGroupRepository.findById(voucher.getBgId())
+                .map(BusinessGroup::getGroupName)
+                .orElse(null);
+
+        String businessUnitName = businessUnitRepository.findById(voucher.getBuId())
+                .map(BusinessUnit::getBusinessUnit)
+                .orElse(null);
+
+        String voucherTypeName = voucher.getVoucherType();
+        if (voucher.getVoucherTypeId() != null && (voucherTypeName == null || voucherTypeName.isEmpty())) {
+            voucherTypeName = lookupValueRepository.findById(voucher.getVoucherTypeId())
+                    .map(AfmLookupValue::getValue)
+                    .orElse(null);
+        }
+
+        String paymentTypeName = voucher.getPaymentType();
+        if (voucher.getPaymentTypeId() != null && (paymentTypeName == null || paymentTypeName.isEmpty())) {
+            paymentTypeName = lookupValueRepository.findById(voucher.getPaymentTypeId())
+                    .map(AfmLookupValue::getValue)
+                    .orElse(null);
+        }
+
+        String paymentThroughName = voucher.getPaymentThrough();
+        if (voucher.getPaymentThroughId() != null && (paymentThroughName == null || paymentThroughName.isEmpty())) {
+            paymentThroughName = lookupValueRepository.findById(voucher.getPaymentThroughId())
+                    .map(AfmLookupValue::getValue)
+                    .orElse(null);
+        }
+
         return AfmVoucherResponseDto.builder()
                 .id(voucher.getId())
                 .bgId(voucher.getBgId())
                 .buId(voucher.getBuId())
+                .businessGroupName(groupName)
+                .businessUnitName(businessUnitName)
                 .voucherDate(voucher.getVoucherDate())
+                .voucherTypeId(voucher.getVoucherTypeId())
+                .voucherTypeName(voucherTypeName)
                 .voucherType(voucher.getVoucherType())
                 .voucherNo(voucher.getVoucherNo())
                 .locationId(voucher.getLocationId())
+                .paymentTypeId(voucher.getPaymentTypeId())
+                .paymentTypeName(paymentTypeName)
                 .paymentType(voucher.getPaymentType())
                 .paymentTo(voucher.getPaymentTo())
+                .paymentThroughId(voucher.getPaymentThroughId())
+                .paymentThroughName(paymentThroughName)
                 .paymentThrough(voucher.getPaymentThrough())
                 .periodName(voucher.getPeriodName())
                 .voucherAmount(voucher.getVoucherAmount())
@@ -437,15 +538,36 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
     }
 
     private AfmVoucherDetailDto toDetailDto(AfmVoucherDetail detail) {
+        String accountCode = null;
+        String accountHeadName = null;
+        if (detail.getCoaId() != null) {
+            Optional<AfmChartOfAccounts> coaOpt = chartOfAccountsRepository.findById(detail.getCoaId());
+            if (coaOpt.isPresent()) {
+                accountCode = coaOpt.get().getAccountCode();
+                accountHeadName = coaOpt.get().getAccountHeadName();
+            }
+        }
+
+        String costCenterName = null;
+        if (detail.getCostCenterId() != null) {
+            Optional<AfmCostCenter> ccOpt = costCenterRepository.findById(detail.getCostCenterId());
+            if (ccOpt.isPresent()) {
+                costCenterName = ccOpt.get().getCostCenter();
+            }
+        }
+
         return AfmVoucherDetailDto.builder()
                 .id(detail.getId())
                 .bgId(detail.getBgId())
                 .buId(detail.getBuId())
                 .voucherId(detail.getVoucherId())
                 .coaId(detail.getCoaId())
+                .accountCode(accountCode)
+                .accountHeadName(accountHeadName)
                 .coaSourceName(detail.getCoaSourceName())
                 .coaSourceId(detail.getCoaSourceId())
                 .costCenterId(detail.getCostCenterId())
+                .costCenterName(costCenterName)
                 .drAmount(detail.getDrAmount())
                 .crAmount(detail.getCrAmount())
                 .status(detail.getStatus())
@@ -466,7 +588,7 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
     }
 
     private AfmVoucherDetail toDetailEntity(AfmVoucherDetailDto dto, Long voucherId, Long bgId, Long buId) {
-        return AfmVoucherDetail.builder()
+        AfmVoucherDetail entity = AfmVoucherDetail.builder()
                 .id(dto.getId())
                 .bgId(dto.getBgId() != null ? dto.getBgId() : bgId)
                 .buId(dto.getBuId() != null ? dto.getBuId() : buId)
@@ -478,10 +600,12 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
                 .drAmount(dto.getDrAmount() != null ? dto.getDrAmount() : BigDecimal.ZERO)
                 .crAmount(dto.getCrAmount() != null ? dto.getCrAmount() : BigDecimal.ZERO)
                 .build();
+        entity.setStatus(dto.getStatus() != null ? dto.getStatus() : 1);
+        return entity;
     }
 
     private AfmVoucherAttach toAttachEntity(AfmVoucherAttachDto dto, Long voucherId, Long bgId, Long buId) {
-        return AfmVoucherAttach.builder()
+        AfmVoucherAttach entity = AfmVoucherAttach.builder()
                 .id(dto.getId())
                 .bgId(dto.getBgId() != null ? dto.getBgId() : bgId)
                 .buId(dto.getBuId() != null ? dto.getBuId() : buId)
@@ -490,6 +614,8 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
                 .attachmentFile(dto.getAttachmentFile())
                 .isActive(dto.getIsActive() != null ? dto.getIsActive() : 1)
                 .build();
+        entity.setStatus(dto.getStatus() != null ? dto.getStatus() : 1);
+        return entity;
     }
 
     private void validateParents(Long bgId, Long buId) {
