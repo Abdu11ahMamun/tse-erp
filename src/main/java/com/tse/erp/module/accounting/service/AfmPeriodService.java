@@ -1,5 +1,6 @@
 package com.tse.erp.module.accounting.service;
 
+import com.tse.erp.module.accounting.dto.AfmCalendarMonthDto;
 import com.tse.erp.module.accounting.dto.AfmPeriodRequestDto;
 import com.tse.erp.module.accounting.dto.AfmPeriodResponseDto;
 
@@ -25,5 +26,6 @@ public interface AfmPeriodService {
     List<String> getOpenPeriodNames(Long buId, String year);
 
     List<String> getAvailableYears(Long buId);
-}
 
+    List<AfmCalendarMonthDto> getCandidateMonths(Long buId, String year, String monthPeriodStatus);
+}

@@ -2,8 +2,10 @@ package com.tse.erp.module.accounting.service;
 
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
+import com.tse.erp.module.accounting.dto.AfmCalendarMonthDto;
 import com.tse.erp.module.accounting.dto.AfmPeriodRequestDto;
 import com.tse.erp.module.accounting.dto.AfmPeriodResponseDto;
+import com.tse.erp.module.accounting.entity.AfmCalendarMonth;
 import com.tse.erp.module.accounting.entity.AfmPeriod;
 import com.tse.erp.module.accounting.repository.AfmCalendarMonthRepository;
 import com.tse.erp.module.accounting.repository.AfmCalendarRepository;
@@ -92,6 +94,96 @@ class AfmPeriodServiceTest {
     }
 
     @Test
+    void createPeriod_SyncsCalendarMonthStatus() {
+        when(businessGroupRepository.findById(1L)).thenReturn(Optional.of(businessGroup));
+        when(businessUnitRepository.findById(10L)).thenReturn(Optional.of(businessUnit));
+        when(periodRepository.existsByBuIdAndPeriodYearAndPeriodNameIgnoreCase(10L, "2026", "Jan-2026"))
+                .thenReturn(false);
+
+        AfmCalendarMonth month = AfmCalendarMonth.builder()
+                .id(55L)
+                .periodName("Jan-2026")
+                .periodStatus("Close")
+                .build();
+        when(calendarMonthRepository.findById(55L)).thenReturn(Optional.of(month));
+
+        when(periodRepository.save(any(AfmPeriod.class))).thenAnswer(invocation -> {
+            AfmPeriod p = invocation.getArgument(0);
+            p.setId(100L);
+            return p;
+        });
+
+        when(businessGroupRepository.findAllById(any())).thenReturn(List.of(businessGroup));
+        when(businessUnitRepository.findAllById(any())).thenReturn(List.of(businessUnit));
+
+        AfmPeriodRequestDto request = AfmPeriodRequestDto.builder()
+                .bgId(1L)
+                .buId(10L)
+                .periodYear("2026")
+                .periodName("Jan-2026")
+                .periodStatus("Open")
+                .afmCalendarMonthId(55L)
+                .status(1)
+                .build();
+
+        AfmPeriodResponseDto response = periodService.createPeriod(request);
+
+        assertThat(response.getAfmCalendarMonthId()).isEqualTo(55L);
+        assertThat(month.getPeriodStatus()).isEqualTo("Open");
+        verify(calendarMonthRepository).save(month);
+    }
+
+    @Test
+    void getCandidateMonths_FiltersStatusAndExcludesExisting() {
+        AfmCalendarMonth month1 = AfmCalendarMonth.builder()
+                .id(1L)
+                .periodName("Jan-2026")
+                .calendarYear("2026")
+                .periodStatus("Close")
+                .build();
+        month1.setStatus(1);
+
+        AfmCalendarMonth month2 = AfmCalendarMonth.builder()
+                .id(2L)
+                .periodName("Feb-2026")
+                .calendarYear("2026")
+                .periodStatus("Close")
+                .build();
+        month2.setStatus(1);
+
+        AfmCalendarMonth month3 = AfmCalendarMonth.builder()
+                .id(3L)
+                .periodName("Mar-2026")
+                .calendarYear("2026")
+                .periodStatus("Open")
+                .build();
+        month3.setStatus(1);
+
+        when(calendarMonthRepository.findByBuIdAndYear(10L, "2026"))
+                .thenReturn(List.of(month1, month2, month3));
+
+        // Jan-2026 already inserted in AFM_PERIOD
+        AfmPeriod existingPeriod = AfmPeriod.builder()
+                .id(101L)
+                .buId(10L)
+                .periodYear("2026")
+                .periodName("Jan-2026")
+                .build();
+        when(periodRepository.findByBuIdAndPeriodYearOrderByIdDesc(10L, "2026"))
+                .thenReturn(List.of(existingPeriod));
+
+        // Asking for candidate months where month periodStatus is "Close"
+        List<AfmCalendarMonthDto> candidates = periodService.getCandidateMonths(10L, "2026", "Close");
+
+        // month1 is excluded because already inserted in AFM_PERIOD
+        // month3 is excluded because status is "Open"
+        // month2 should be returned
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.get(0).getId()).isEqualTo(2L);
+        assertThat(candidates.get(0).getPeriodName()).isEqualTo("Feb-2026");
+    }
+
+    @Test
     void createPeriod_Duplicate_ThrowsDuplicateException() {
         when(businessGroupRepository.findById(1L)).thenReturn(Optional.of(businessGroup));
         when(businessUnitRepository.findById(10L)).thenReturn(Optional.of(businessUnit));
@@ -131,4 +223,3 @@ class AfmPeriodServiceTest {
         verify(periodRepository).deleteById(50L);
     }
 }
-

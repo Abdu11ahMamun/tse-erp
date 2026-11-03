@@ -32,6 +32,9 @@ public class AfmVoucherDetail extends BaseEntity {
     @Column(name = "COA_ID")
     private Long coaId;
 
+    @Column(name = "COA_SOURCE_TYPE", length = 100)
+    private String coaSourceType;
+
     @Column(name = "COA_SOURCE_NAME", length = 100)
     private String coaSourceName;
 

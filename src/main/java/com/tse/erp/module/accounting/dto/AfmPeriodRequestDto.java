@@ -14,6 +14,6 @@ public class AfmPeriodRequestDto {
     private String periodYear;
     private String periodName;
     private String periodStatus;
+    private Long afmCalendarMonthId;
     private Integer status;
 }
-

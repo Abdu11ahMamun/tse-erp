@@ -21,6 +21,7 @@ public class AfmPeriodResponseDto {
     private String periodYear;
     private String periodName;
     private String periodStatus;
+    private Long afmCalendarMonthId;
 
     private Integer status;
 
@@ -33,4 +34,3 @@ public class AfmPeriodResponseDto {
     private String createdApp;
     private String updatedApp;
 }
-

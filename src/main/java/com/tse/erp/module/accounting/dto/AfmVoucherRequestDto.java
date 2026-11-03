@@ -20,11 +20,14 @@ public class AfmVoucherRequestDto {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate voucherDate;
 
+    private Long voucherTypeId;
     private String voucherType;
     private String voucherNo;
     private Long locationId;
+    private Long paymentTypeId;
     private String paymentType;
     private String paymentTo;
+    private Long paymentThroughId;
     private String paymentThrough;
     private String periodName;
     private BigDecimal voucherAmount;

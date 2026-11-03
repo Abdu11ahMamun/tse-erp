@@ -56,7 +56,16 @@ public class AfmCalendarServiceImpl implements AfmCalendarService {
             calendars = calendars.stream().filter(c -> status.equals(c.getStatus())).toList();
         }
 
-        return toResponseList(calendars);
+        List<AfmCalendarResponseDto> responseList = toResponseList(calendars);
+        if (!responseList.isEmpty()) {
+            List<Long> calIds = responseList.stream().map(AfmCalendarResponseDto::getId).toList();
+            Map<Long, List<AfmCalendarMonthDto>> monthsByCalId = calendarMonthRepository.findAll().stream()
+                    .filter(m -> m.getAfmCalendarId() != null && calIds.contains(m.getAfmCalendarId()))
+                    .map(this::toMonthDto)
+                    .collect(Collectors.groupingBy(AfmCalendarMonthDto::getAfmCalendarId));
+            responseList.forEach(dto -> dto.setCalendarMonths(monthsByCalId.getOrDefault(dto.getId(), Collections.emptyList())));
+        }
+        return responseList;
     }
 
     @Override

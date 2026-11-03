@@ -18,15 +18,23 @@ public class AfmVoucherResponseDto {
     private Long id;
     private Long bgId;
     private Long buId;
+    private String businessGroupName;
+    private String businessUnitName;
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate voucherDate;
 
+    private Long voucherTypeId;
+    private String voucherTypeName;
     private String voucherType;
     private String voucherNo;
     private Long locationId;
+    private Long paymentTypeId;
+    private String paymentTypeName;
     private String paymentType;
     private String paymentTo;
+    private Long paymentThroughId;
+    private String paymentThroughName;
     private String paymentThrough;
     private String periodName;
     private BigDecimal voucherAmount;

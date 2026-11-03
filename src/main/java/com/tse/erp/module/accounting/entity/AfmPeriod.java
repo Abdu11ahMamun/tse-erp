@@ -32,5 +32,7 @@ public class AfmPeriod extends BaseEntity {
 
     @Column(name = "PERIOD_STATUS", nullable = false, length = 20)
     private String periodStatus;
-}
 
+    @Column(name = "AFM_CALENDAR_MONTH_ID")
+    private Long afmCalendarMonthId;
+}

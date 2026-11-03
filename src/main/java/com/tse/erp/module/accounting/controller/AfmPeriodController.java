@@ -1,5 +1,6 @@
 package com.tse.erp.module.accounting.controller;
 
+import com.tse.erp.module.accounting.dto.AfmCalendarMonthDto;
 import com.tse.erp.module.accounting.dto.AfmPeriodRequestDto;
 import com.tse.erp.module.accounting.dto.AfmPeriodResponseDto;
 import com.tse.erp.module.accounting.service.AfmPeriodService;
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/v1/afm-periods", "/api/v1/accounting-periods", "/api/v1/periods"})
+@RequestMapping({"/api/v1/afm-periods", "/api/v1/periods", "/api/v1/accounting-periods"})
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class AfmPeriodController {
@@ -57,7 +58,7 @@ public class AfmPeriodController {
     @GetMapping("/open-periods")
     public ResponseEntity<List<String>> getOpenPeriodNames(
             @RequestParam Long buId,
-            @RequestParam String year) {
+            @RequestParam(required = false) String year) {
         return ResponseEntity.ok(periodService.getOpenPeriodNames(buId, year));
     }
 
@@ -66,5 +67,12 @@ public class AfmPeriodController {
             @RequestParam Long buId) {
         return ResponseEntity.ok(periodService.getAvailableYears(buId));
     }
-}
 
+    @GetMapping("/candidate-months")
+    public ResponseEntity<List<AfmCalendarMonthDto>> getCandidateMonths(
+            @RequestParam Long buId,
+            @RequestParam String year,
+            @RequestParam String monthPeriodStatus) {
+        return ResponseEntity.ok(periodService.getCandidateMonths(buId, year, monthPeriodStatus));
+    }
+}

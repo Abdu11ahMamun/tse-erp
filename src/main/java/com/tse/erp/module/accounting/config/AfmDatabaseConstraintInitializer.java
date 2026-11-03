@@ -111,6 +111,34 @@ public class AfmDatabaseConstraintInitializer implements ApplicationRunner {
                 "ID",
                 "FK_AFM_PERIOD_BU"
         );
+        ensureForeignKeyConstraint(
+                "AFM_VOUCHER",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_AFM_VOUCHER_BG"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_VOUCHER",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_AFM_VOUCHER_BU"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_VOUCHER_DETAIL",
+                "VOUCHER_ID",
+                "AFM_VOUCHER",
+                "ID",
+                "FK_AFM_VOUCHER_DTL_VOUCHER"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_VOUCHER_ATTACH",
+                "VOUCHER_ID",
+                "AFM_VOUCHER",
+                "ID",
+                "FK_AFM_VOUCHER_ATT_VOUCHER"
+        );
     }
 
     private void ensureForeignKeyConstraint(
