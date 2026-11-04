@@ -23,3 +23,8 @@ public class GatePassDto {
     private Integer status;
     private List<GatePassItemDto> items;
 }
+
+cd ~/git-project/tse-erp
+ls src/main/java/com/tse/erp/module/asset/controller/
+        git status --short | head -30
+        git log --oneline -3
