@@ -299,6 +299,7 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
             throw new BadRequestException("Detail row with id " + detailId + " does not belong to Voucher " + voucherId);
         }
         existing.setCoaId(detailDto.getCoaId());
+        existing.setCoaSourceType(detailDto.getCoaSourceType() != null ? detailDto.getCoaSourceType().trim() : null);
         existing.setCoaSourceName(detailDto.getCoaSourceName() != null ? detailDto.getCoaSourceName().trim() : null);
         existing.setCoaSourceId(detailDto.getCoaSourceId());
         existing.setCostCenterId(detailDto.getCostCenterId());
@@ -380,6 +381,7 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
                     ex.setBgId(voucher.getBgId());
                     ex.setBuId(voucher.getBuId());
                     ex.setCoaId(dto.getCoaId());
+                    ex.setCoaSourceType(dto.getCoaSourceType() != null ? dto.getCoaSourceType().trim() : null);
                     ex.setCoaSourceName(dto.getCoaSourceName() != null ? dto.getCoaSourceName().trim() : null);
                     ex.setCoaSourceId(dto.getCoaSourceId());
                     ex.setCostCenterId(dto.getCostCenterId());
@@ -540,11 +542,15 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
     private AfmVoucherDetailDto toDetailDto(AfmVoucherDetail detail) {
         String accountCode = null;
         String accountHeadName = null;
+        String coaSourceType = detail.getCoaSourceType();
         if (detail.getCoaId() != null) {
             Optional<AfmChartOfAccounts> coaOpt = chartOfAccountsRepository.findById(detail.getCoaId());
             if (coaOpt.isPresent()) {
                 accountCode = coaOpt.get().getAccountCode();
                 accountHeadName = coaOpt.get().getAccountHeadName();
+                if (coaSourceType == null || coaSourceType.isBlank()) {
+                    coaSourceType = coaOpt.get().getAccountsSource();
+                }
             }
         }
 
@@ -564,6 +570,7 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
                 .coaId(detail.getCoaId())
                 .accountCode(accountCode)
                 .accountHeadName(accountHeadName)
+                .coaSourceType(coaSourceType)
                 .coaSourceName(detail.getCoaSourceName())
                 .coaSourceId(detail.getCoaSourceId())
                 .costCenterId(detail.getCostCenterId())
@@ -594,6 +601,7 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
                 .buId(dto.getBuId() != null ? dto.getBuId() : buId)
                 .voucherId(voucherId)
                 .coaId(dto.getCoaId())
+                .coaSourceType(dto.getCoaSourceType() != null ? dto.getCoaSourceType().trim() : null)
                 .coaSourceName(dto.getCoaSourceName() != null ? dto.getCoaSourceName().trim() : null)
                 .coaSourceId(dto.getCoaSourceId())
                 .costCenterId(dto.getCostCenterId())
