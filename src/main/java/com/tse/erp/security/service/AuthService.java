@@ -1,5 +1,7 @@
 package com.tse.erp.security.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.module.admin.entity.Role;
 import com.tse.erp.module.admin.entity.User;
@@ -15,10 +17,18 @@ import com.tse.erp.security.model.LoginRequest;
 import com.tse.erp.security.model.TokenResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Service
@@ -32,6 +42,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final UserEmplMapRepository userEmplMapRepository;
     private final UserTypeRepository userTypeRepository;
+    private final CaptchaService captchaService;
 
     @Value("${security.rate-limit.max-attempts-per-account}")
     private int maxAttemptsPerAccount;
@@ -41,6 +52,9 @@ public class AuthService {
 
     @Value("${jwt.access-token-expiry}")
     private long accessTokenExpiry;
+
+    @Value("${captcha.login-after-failures:3}")
+    private int captchaAfterFailures;
 
     // =========================================
     // LOGIN
@@ -52,6 +66,17 @@ public class AuthService {
         String ipAddress = getClientIp(httpRequest);
         String deviceInfo = httpRequest.getHeader("User-Agent");
         String username = request.getUsername().trim();
+
+        // ── Captcha: recent failure beshi hole required ──
+        long recentFailures = auditLogRepository
+                .countByUsernameAndAuthStatusAndCreatedAtAfter(
+                        username,
+                        LoginAuditLog.AuthStatus.FAILURE,
+                        LocalDateTime.now().minusSeconds(windowSeconds));
+        if (captchaService.isEnabled()
+                && recentFailures >= captchaAfterFailures) {
+            captchaService.verify(request.getCaptchaToken(), ipAddress);
+        }
 
         // ── Rate limit check (per account) ──
         checkAccountRateLimit(username);
@@ -129,7 +154,6 @@ public class AuthService {
                 .buId(user.getBuId())
                 .build();
     }
-
     // =========================================
     // REFRESH TOKEN
     // =========================================

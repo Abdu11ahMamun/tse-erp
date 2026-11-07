@@ -1,5 +1,6 @@
 package com.tse.erp.exception;
 
+import com.tse.erp.security.service.CaptchaService;
 import com.tse.erp.security.service.ChangePasswordService;
 import com.tse.erp.security.service.PasswordResetService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -200,5 +201,19 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    @ExceptionHandler(CaptchaService.CaptchaRequiredException.class)
+    public ResponseEntity<Map<String, Object>> handleCaptchaRequired(
+            CaptchaService.CaptchaRequiredException ex,
+            HttpServletRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", 400);
+        body.put("error", "Bad Request");
+        body.put("message", ex.getMessage());
+        body.put("captchaRequired", true);
+        body.put("path", request.getRequestURI());
+        body.put("timestamp", LocalDateTime.now().toString());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 }
