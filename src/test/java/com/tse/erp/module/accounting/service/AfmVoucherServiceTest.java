@@ -11,6 +11,7 @@ import com.tse.erp.module.admin.entity.BusinessGroup;
 import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
+import com.tse.erp.module.hr.repository.EmployeeRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +47,12 @@ class AfmVoucherServiceTest {
     private AfmChartOfAccountsRepository chartOfAccountsRepository;
     @Mock
     private AfmCostCenterRepository costCenterRepository;
+    @Mock
+    private EmployeeRepository employeeRepository;
+    @Mock
+    private AfmSupplierInfoRepository supplierInfoRepository;
+    @Mock
+    private AfmCustomerInfoRepository customerInfoRepository;
 
     @InjectMocks
     private AfmVoucherServiceImpl voucherService;
@@ -213,5 +220,57 @@ class AfmVoucherServiceTest {
         voucherService.deleteVoucher(1L);
 
         verify(voucherRepository, times(1)).delete(existing);
+    }
+
+    @Test
+    void getVoucherDetails_withSupplierSource_resolvesSupplierName() {
+        AfmVoucher voucher = AfmVoucher.builder().id(1L).bgId(1L).buId(10L).build();
+        when(voucherRepository.findById(1L)).thenReturn(Optional.of(voucher));
+
+        AfmVoucherDetail detail = AfmVoucherDetail.builder()
+                .id(101L)
+                .voucherId(1L)
+                .coaSourceType("Supplier")
+                .coaSourceId(55L)
+                .build();
+        when(voucherDetailRepository.findByVoucherIdOrderByIdAsc(1L)).thenReturn(List.of(detail));
+
+        AfmSupplierInfo supplier = AfmSupplierInfo.builder()
+                .id(55L)
+                .supplierCode("SPA-000004")
+                .supplierName("Rakib")
+                .build();
+        when(supplierInfoRepository.findById(55L)).thenReturn(Optional.of(supplier));
+
+        List<AfmVoucherDetailDto> result = voucherService.getVoucherDetails(1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getCoaSourceName()).isEqualTo("SPA-000004: Rakib");
+    }
+
+    @Test
+    void getVoucherDetails_withCustomerSource_resolvesCustomerName() {
+        AfmVoucher voucher = AfmVoucher.builder().id(1L).bgId(1L).buId(10L).build();
+        when(voucherRepository.findById(1L)).thenReturn(Optional.of(voucher));
+
+        AfmVoucherDetail detail = AfmVoucherDetail.builder()
+                .id(102L)
+                .voucherId(1L)
+                .coaSourceType("Customer")
+                .coaSourceId(88L)
+                .build();
+        when(voucherDetailRepository.findByVoucherIdOrderByIdAsc(1L)).thenReturn(List.of(detail));
+
+        AfmCustomerInfo customer = AfmCustomerInfo.builder()
+                .id(88L)
+                .customerCode("CUS-00001")
+                .customerName("Rahim Corp")
+                .build();
+        when(customerInfoRepository.findById(88L)).thenReturn(Optional.of(customer));
+
+        List<AfmVoucherDetailDto> result = voucherService.getVoucherDetails(1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getCoaSourceName()).isEqualTo("CUS-00001: Rahim Corp");
     }
 }

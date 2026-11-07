@@ -13,8 +13,12 @@ import com.tse.erp.module.accounting.entity.AfmVoucher;
 import com.tse.erp.module.accounting.entity.AfmVoucherAttach;
 import com.tse.erp.module.accounting.entity.AfmVoucherDetail;
 import com.tse.erp.module.accounting.repository.AfmChartOfAccountsRepository;
+import com.tse.erp.module.accounting.entity.AfmCustomerInfo;
+import com.tse.erp.module.accounting.entity.AfmSupplierInfo;
 import com.tse.erp.module.accounting.repository.AfmCostCenterRepository;
+import com.tse.erp.module.accounting.repository.AfmCustomerInfoRepository;
 import com.tse.erp.module.accounting.repository.AfmLookupValueRepository;
+import com.tse.erp.module.accounting.repository.AfmSupplierInfoRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherAttachRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherDetailRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherRepository;
@@ -23,6 +27,8 @@ import com.tse.erp.module.admin.entity.BusinessGroup;
 import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
+import com.tse.erp.module.hr.entity.Employee;
+import com.tse.erp.module.hr.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +49,9 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
     private final AfmLookupValueRepository lookupValueRepository;
     private final AfmChartOfAccountsRepository chartOfAccountsRepository;
     private final AfmCostCenterRepository costCenterRepository;
+    private final EmployeeRepository employeeRepository;
+    private final AfmSupplierInfoRepository supplierInfoRepository;
+    private final AfmCustomerInfoRepository customerInfoRepository;
 
     @Override
     public List<AfmVoucherResponseDto> getAllVouchers(Long bgId, Long buId, String voucherType, Integer status, LocalDate fromDate, LocalDate toDate) {
@@ -299,6 +308,7 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
             throw new BadRequestException("Detail row with id " + detailId + " does not belong to Voucher " + voucherId);
         }
         existing.setCoaId(detailDto.getCoaId());
+        existing.setCoaSourceType(detailDto.getCoaSourceType() != null ? detailDto.getCoaSourceType().trim() : null);
         existing.setCoaSourceName(detailDto.getCoaSourceName() != null ? detailDto.getCoaSourceName().trim() : null);
         existing.setCoaSourceId(detailDto.getCoaSourceId());
         existing.setCostCenterId(detailDto.getCostCenterId());
@@ -380,7 +390,18 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
                     ex.setBgId(voucher.getBgId());
                     ex.setBuId(voucher.getBuId());
                     ex.setCoaId(dto.getCoaId());
-                    ex.setCoaSourceName(dto.getCoaSourceName() != null ? dto.getCoaSourceName().trim() : null);
+                    ex.setCoaSourceType(dto.getCoaSourceType() != null ? dto.getCoaSourceType().trim() : null);
+                    String coaSourceName = dto.getCoaSourceName() != null ? dto.getCoaSourceName().trim() : null;
+                    if ("employee".equalsIgnoreCase(dto.getCoaSourceType()) && dto.getCoaSourceId() != null && (coaSourceName == null || coaSourceName.isBlank())) {
+                        Optional<Employee> empOpt = employeeRepository.findById(dto.getCoaSourceId());
+                        if (empOpt.isPresent()) {
+                            Employee emp = empOpt.get();
+                            String code = emp.getEmployeeCode() != null ? emp.getEmployeeCode() : "";
+                            String name = emp.getEmployeeName() != null ? emp.getEmployeeName() : "";
+                            coaSourceName = !code.isEmpty() && !name.isEmpty() ? code + ": " + name : (!code.isEmpty() ? code : name);
+                        }
+                    }
+                    ex.setCoaSourceName(coaSourceName);
                     ex.setCoaSourceId(dto.getCoaSourceId());
                     ex.setCostCenterId(dto.getCostCenterId());
                     ex.setDrAmount(dto.getDrAmount() != null ? dto.getDrAmount() : BigDecimal.ZERO);
@@ -540,11 +561,15 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
     private AfmVoucherDetailDto toDetailDto(AfmVoucherDetail detail) {
         String accountCode = null;
         String accountHeadName = null;
+        String coaSourceType = detail.getCoaSourceType();
         if (detail.getCoaId() != null) {
             Optional<AfmChartOfAccounts> coaOpt = chartOfAccountsRepository.findById(detail.getCoaId());
             if (coaOpt.isPresent()) {
                 accountCode = coaOpt.get().getAccountCode();
                 accountHeadName = coaOpt.get().getAccountHeadName();
+                if (coaSourceType == null || coaSourceType.isBlank()) {
+                    coaSourceType = coaOpt.get().getAccountsSource();
+                }
             }
         }
 
@@ -556,6 +581,33 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
             }
         }
 
+        String coaSourceName = detail.getCoaSourceName();
+        if ("employee".equalsIgnoreCase(coaSourceType) && detail.getCoaSourceId() != null && (coaSourceName == null || coaSourceName.isBlank())) {
+            Optional<Employee> empOpt = employeeRepository.findById(detail.getCoaSourceId());
+            if (empOpt.isPresent()) {
+                Employee emp = empOpt.get();
+                String code = emp.getEmployeeCode() != null ? emp.getEmployeeCode() : "";
+                String name = emp.getEmployeeName() != null ? emp.getEmployeeName() : "";
+                coaSourceName = !code.isEmpty() && !name.isEmpty() ? code + ": " + name : (!code.isEmpty() ? code : name);
+            }
+        } else if ("supplier".equalsIgnoreCase(coaSourceType) && detail.getCoaSourceId() != null && (coaSourceName == null || coaSourceName.isBlank())) {
+            Optional<AfmSupplierInfo> supOpt = supplierInfoRepository.findById(detail.getCoaSourceId());
+            if (supOpt.isPresent()) {
+                AfmSupplierInfo sup = supOpt.get();
+                String code = sup.getSupplierCode() != null ? sup.getSupplierCode() : "";
+                String name = sup.getSupplierName() != null ? sup.getSupplierName() : "";
+                coaSourceName = !code.isEmpty() && !name.isEmpty() ? code + ": " + name : (!code.isEmpty() ? code : name);
+            }
+        } else if ("customer".equalsIgnoreCase(coaSourceType) && detail.getCoaSourceId() != null && (coaSourceName == null || coaSourceName.isBlank())) {
+            Optional<AfmCustomerInfo> cusOpt = customerInfoRepository.findById(detail.getCoaSourceId());
+            if (cusOpt.isPresent()) {
+                AfmCustomerInfo cus = cusOpt.get();
+                String code = cus.getCustomerCode() != null ? cus.getCustomerCode() : "";
+                String name = cus.getCustomerName() != null ? cus.getCustomerName() : "";
+                coaSourceName = !code.isEmpty() && !name.isEmpty() ? code + ": " + name : (!code.isEmpty() ? code : name);
+            }
+        }
+
         return AfmVoucherDetailDto.builder()
                 .id(detail.getId())
                 .bgId(detail.getBgId())
@@ -564,7 +616,8 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
                 .coaId(detail.getCoaId())
                 .accountCode(accountCode)
                 .accountHeadName(accountHeadName)
-                .coaSourceName(detail.getCoaSourceName())
+                .coaSourceType(coaSourceType)
+                .coaSourceName(coaSourceName)
                 .coaSourceId(detail.getCoaSourceId())
                 .costCenterId(detail.getCostCenterId())
                 .costCenterName(costCenterName)
@@ -588,13 +641,41 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
     }
 
     private AfmVoucherDetail toDetailEntity(AfmVoucherDetailDto dto, Long voucherId, Long bgId, Long buId) {
+        String coaSourceName = dto.getCoaSourceName() != null ? dto.getCoaSourceName().trim() : null;
+        if ("employee".equalsIgnoreCase(dto.getCoaSourceType()) && dto.getCoaSourceId() != null && (coaSourceName == null || coaSourceName.isBlank())) {
+            Optional<Employee> empOpt = employeeRepository.findById(dto.getCoaSourceId());
+            if (empOpt.isPresent()) {
+                Employee emp = empOpt.get();
+                String code = emp.getEmployeeCode() != null ? emp.getEmployeeCode() : "";
+                String name = emp.getEmployeeName() != null ? emp.getEmployeeName() : "";
+                coaSourceName = !code.isEmpty() && !name.isEmpty() ? code + ": " + name : (!code.isEmpty() ? code : name);
+            }
+        } else if ("supplier".equalsIgnoreCase(dto.getCoaSourceType()) && dto.getCoaSourceId() != null && (coaSourceName == null || coaSourceName.isBlank())) {
+            Optional<AfmSupplierInfo> supOpt = supplierInfoRepository.findById(dto.getCoaSourceId());
+            if (supOpt.isPresent()) {
+                AfmSupplierInfo sup = supOpt.get();
+                String code = sup.getSupplierCode() != null ? sup.getSupplierCode() : "";
+                String name = sup.getSupplierName() != null ? sup.getSupplierName() : "";
+                coaSourceName = !code.isEmpty() && !name.isEmpty() ? code + ": " + name : (!code.isEmpty() ? code : name);
+            }
+        } else if ("customer".equalsIgnoreCase(dto.getCoaSourceType()) && dto.getCoaSourceId() != null && (coaSourceName == null || coaSourceName.isBlank())) {
+            Optional<AfmCustomerInfo> cusOpt = customerInfoRepository.findById(dto.getCoaSourceId());
+            if (cusOpt.isPresent()) {
+                AfmCustomerInfo cus = cusOpt.get();
+                String code = cus.getCustomerCode() != null ? cus.getCustomerCode() : "";
+                String name = cus.getCustomerName() != null ? cus.getCustomerName() : "";
+                coaSourceName = !code.isEmpty() && !name.isEmpty() ? code + ": " + name : (!code.isEmpty() ? code : name);
+            }
+        }
+
         AfmVoucherDetail entity = AfmVoucherDetail.builder()
                 .id(dto.getId())
                 .bgId(dto.getBgId() != null ? dto.getBgId() : bgId)
                 .buId(dto.getBuId() != null ? dto.getBuId() : buId)
                 .voucherId(voucherId)
                 .coaId(dto.getCoaId())
-                .coaSourceName(dto.getCoaSourceName() != null ? dto.getCoaSourceName().trim() : null)
+                .coaSourceType(dto.getCoaSourceType() != null ? dto.getCoaSourceType().trim() : null)
+                .coaSourceName(coaSourceName)
                 .coaSourceId(dto.getCoaSourceId())
                 .costCenterId(dto.getCostCenterId())
                 .drAmount(dto.getDrAmount() != null ? dto.getDrAmount() : BigDecimal.ZERO)
