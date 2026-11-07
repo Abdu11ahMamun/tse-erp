@@ -20,6 +20,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,7 +41,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        // ── Authorization header check ──
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -49,13 +51,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         try {
-            // ── Token validate ──
             if (!jwtUtil.validateToken(token)) {
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            // ── Access token kina check ──
             if (!jwtUtil.isAccessToken(token)) {
                 filterChain.doFilter(request, response);
                 return;
@@ -64,12 +64,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String username = jwtUtil.extractUsername(token);
             String role = jwtUtil.extractRole(token);
 
-            // ── Already authenticated? ──
             if (username != null &&
                     SecurityContextHolder.getContext()
                             .getAuthentication() == null) {
 
-                // User still active kina, ar current BG/BU/employee DB theke
                 Optional<User> userOpt =
                         userRepository.findByUserName(username);
 
@@ -78,6 +76,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         userOpt.get().getStatus())) {
 
                     User u = userOpt.get();
+
+                    // Password bodlanor age issue kora token reject
+                    if (u.getPasswordChangedAt() != null) {
+                        Date iat = jwtUtil.extractIssuedAt(token);
+                        if (iat != null && iat.toInstant().isBefore(
+                                u.getPasswordChangedAt()
+                                        .truncatedTo(ChronoUnit.SECONDS)
+                                        .atZone(ZoneId.systemDefault())
+                                        .toInstant())) {
+                            writeUnauthorized(response, request,
+                                    "Token is no longer valid. Please log in again.");
+                            return;
+                        }
+                    }
 
                     Long empId = userEmplMapRepository
                             .findByUserIdOrderByIdAsc(u.getId())
@@ -92,7 +104,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             u.getId(), username, empId,
                             u.getBgId(), u.getBuId());
 
-                    // Role authority set koro
                     List<SimpleGrantedAuthority> authorities = List.of(
                             new SimpleGrantedAuthority("ROLE_" + role));
 
@@ -110,27 +121,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
 
         } catch (ExpiredJwtException e) {
-            // Token expire, 401 return koro
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write(
-                    "{\"status\":401," +
-                            "\"error\":\"Unauthorized\"," +
-                            "\"message\":\"Token has expired\"," +
-                            "\"path\":\"" + request.getRequestURI() + "\"}");
+            writeUnauthorized(response, request, "Token has expired");
             return;
         } catch (Exception e) {
-            // Invalid token
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json");
-            response.getWriter().write(
-                    "{\"status\":401," +
-                            "\"error\":\"Unauthorized\"," +
-                            "\"message\":\"Invalid token\"," +
-                            "\"path\":\"" + request.getRequestURI() + "\"}");
+            writeUnauthorized(response, request, "Invalid token");
             return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void writeUnauthorized(HttpServletResponse response,
+                                   HttpServletRequest request,
+                                   String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+        response.getWriter().write(
+                "{\"status\":401," +
+                        "\"error\":\"Unauthorized\"," +
+                        "\"message\":\"" + message + "\"," +
+                        "\"path\":\"" + request.getRequestURI() + "\"}");
     }
 }

@@ -1,5 +1,7 @@
 package com.tse.erp.exception;
 
+import com.tse.erp.security.service.ChangePasswordService;
+import com.tse.erp.security.service.PasswordResetService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -164,5 +166,39 @@ public class GlobalExceptionHandler {
                 .build();
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+    // =========================================
+    // 429 — Too Many Requests
+    // =========================================
+    @ExceptionHandler(PasswordResetService.TooManyRequests.class)
+    public ResponseEntity<ErrorResponse> handleTooMany(
+            PasswordResetService.TooManyRequests ex,
+            HttpServletRequest request) {
+
+        ErrorResponse error = ErrorResponse.builder()
+                .status(HttpStatus.TOO_MANY_REQUESTS.value())
+                .error("Too Many Requests")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(error);
+    }
+
+    @ExceptionHandler(ChangePasswordService.UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorized(
+            ChangePasswordService.UnauthorizedException ex,
+            HttpServletRequest request) {
+
+        ErrorResponse error = ErrorResponse.builder()
+                .status(HttpStatus.UNAUTHORIZED.value())
+                .error("Unauthorized")
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .timestamp(LocalDateTime.now())
+                .build();
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 }

@@ -74,4 +74,8 @@ public class User extends BaseEntity {
 
     @Transient
     private String userTypeCode;
+
+    @Column(name = "password_changed_at")
+    private java.time.LocalDateTime passwordChangedAt;
+
 }

@@ -160,4 +160,7 @@ public class JwtUtil {
     public boolean isRefreshToken(String token) {
         return "refresh".equals(extractTokenType(token));
     }
+    public java.util.Date extractIssuedAt(String token) {
+        return extractAllClaims(token).getIssuedAt();
+    }
 }
