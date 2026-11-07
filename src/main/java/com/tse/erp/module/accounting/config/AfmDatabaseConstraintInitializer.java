@@ -174,6 +174,34 @@ public class AfmDatabaseConstraintInitializer implements ApplicationRunner {
                 "ID",
                 "FK_AFM_USER_SETUP_USER"
         );
+        ensureForeignKeyConstraint(
+                "AFM_SUPPLIER_INFO",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_AFM_SUPPLIER_INFO_BG"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_SUPPLIER_INFO",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_AFM_SUPPLIER_INFO_BU"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_CUSTOMER_INFO",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_AFM_CUSTOMER_INFO_BG"
+        );
+        ensureForeignKeyConstraint(
+                "AFM_CUSTOMER_INFO",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_AFM_CUSTOMER_INFO_BU"
+        );
     }
 
     private void ensureForeignKeyConstraint(
@@ -184,15 +212,13 @@ public class AfmDatabaseConstraintInitializer implements ApplicationRunner {
             String constraintName) {
         try {
             Integer existingCount = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM information_schema.KEY_COLUMN_USAGE " +
+                    "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS " +
                     "WHERE TABLE_SCHEMA = DATABASE() " +
-                    "  AND LOWER(TABLE_NAME) = LOWER(?) " +
-                    "  AND LOWER(COLUMN_NAME) = LOWER(?) " +
-                    "  AND LOWER(REFERENCED_TABLE_NAME) = LOWER(?)",
+                    "  AND TABLE_NAME = ? " +
+                    "  AND CONSTRAINT_NAME = ?",
                     Integer.class,
                     tableName,
-                    columnName,
-                    referencedTable
+                    constraintName
             );
 
             if (existingCount != null && existingCount > 0) {
