@@ -102,6 +102,7 @@ public class AfmVTypePTypeMapServiceImpl implements AfmVTypePTypeMapService {
                 .buId(request.getBuId())
                 .voucherTypeId(request.getVoucherTypeId())
                 .paymentTypeId(request.getPaymentTypeId())
+                .bankChequeMode(request.getBankChequeMode() != null ? request.getBankChequeMode() : "Readonly")
                 .build();
 
         entity.setStatus(request.getStatus() != null ? request.getStatus() : 1);
@@ -133,6 +134,9 @@ public class AfmVTypePTypeMapServiceImpl implements AfmVTypePTypeMapService {
         existing.setBuId(request.getBuId());
         existing.setVoucherTypeId(request.getVoucherTypeId());
         existing.setPaymentTypeId(request.getPaymentTypeId());
+        if (request.getBankChequeMode() != null) {
+            existing.setBankChequeMode(request.getBankChequeMode());
+        }
         if (request.getStatus() != null) {
             existing.setStatus(request.getStatus());
         }
@@ -224,6 +228,7 @@ public class AfmVTypePTypeMapServiceImpl implements AfmVTypePTypeMapService {
                 .paymentTypeId(mapping.getPaymentTypeId())
                 .paymentTypeValue(paymentType != null ? paymentType.getValue() : null)
                 .paymentTypeValueCode(paymentType != null ? paymentType.getValueCode() : null)
+                .bankChequeMode(mapping.getBankChequeMode())
                 .status(mapping.getStatus())
                 .createdUserId(mapping.getCreatedUserId())
                 .createdEmpId(mapping.getCreatedEmpId())
@@ -265,6 +270,7 @@ public class AfmVTypePTypeMapServiceImpl implements AfmVTypePTypeMapService {
                     .paymentTypeId(m.getPaymentTypeId())
                     .paymentTypeValue(paymentType != null ? paymentType.getValue() : null)
                     .paymentTypeValueCode(paymentType != null ? paymentType.getValueCode() : null)
+                    .bankChequeMode(m.getBankChequeMode())
                     .status(m.getStatus())
                     .createdUserId(m.getCreatedUserId())
                     .createdEmpId(m.getCreatedEmpId())

@@ -18,9 +18,11 @@ public class EmployeeController {
 
     @GetMapping
     public ResponseEntity<List<Employee>> getAllEmployees(
-            @RequestParam(required = false) Long buId) {
+            @RequestParam(required = false) Long buId,
+            @RequestParam(required = false) Long bgId,
+            @RequestParam(required = false) Integer status) {
         return ResponseEntity.ok(
-                employeeService.getAllEmployees(buId));
+                employeeService.getAllEmployees(buId, bgId, status));
     }
 
     @GetMapping("/{id}")

@@ -115,6 +115,7 @@ public class AuthService {
 
         return TokenResponse.builder()
                 .accessToken(accessToken)
+                .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn((int) (accessTokenExpiry / 1000))
                 .username(username)
@@ -171,6 +172,7 @@ public class AuthService {
 
         return TokenResponse.builder()
                 .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
                 .tokenType("Bearer")
                 .expiresIn((int) (accessTokenExpiry / 1000))
                 .username(username)

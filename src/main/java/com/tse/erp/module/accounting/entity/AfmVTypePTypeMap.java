@@ -49,4 +49,7 @@ public class AfmVTypePTypeMap extends BaseEntity {
             foreignKey = @ForeignKey(name = "FK_AFM_VT_PT_MAP_PAYMENT_TYPE")
     )
     private AfmLookupValue paymentType;
+
+    @Column(name = "BANK_CHEQUE_MODE", length = 20)
+    private String bankChequeMode;
 }

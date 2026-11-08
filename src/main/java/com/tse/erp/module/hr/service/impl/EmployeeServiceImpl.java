@@ -78,10 +78,25 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Override
     public List<Employee> getAllEmployees(Long buId) {
-        if (buId == null) {
-            return employeeRepository.findAllByOrderByIdDesc();
+        return getAllEmployees(buId, null, null);
+    }
+
+    @Override
+    public List<Employee> getAllEmployees(Long buId, Long bgId, Integer status) {
+        List<Employee> list;
+        if (bgId != null && buId != null) {
+            list = employeeRepository.findByBgIdAndBuIdOrderByIdDesc(bgId, buId);
+        } else if (buId != null) {
+            list = employeeRepository.findByBuIdOrderByIdDesc(buId);
+        } else if (bgId != null) {
+            list = employeeRepository.findByBgIdOrderByIdDesc(bgId);
+        } else {
+            list = employeeRepository.findAllByOrderByIdDesc();
         }
-        return employeeRepository.findByBuIdOrderByIdDesc(buId);
+        if (status != null) {
+            list = list.stream().filter(e -> status.equals(e.getStatus())).toList();
+        }
+        return list;
     }
 
     @Override
