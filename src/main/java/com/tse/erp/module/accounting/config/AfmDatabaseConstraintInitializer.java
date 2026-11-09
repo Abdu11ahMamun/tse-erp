@@ -202,6 +202,48 @@ public class AfmDatabaseConstraintInitializer implements ApplicationRunner {
                 "ID",
                 "FK_AFM_CUSTOMER_INFO_BU"
         );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_CATEGORY",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_INV_ITEM_CAT_BG"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_CATEGORY",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_INV_ITEM_CAT_BU"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_BRAND",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_INV_ITEM_BRAND_BG"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_BRAND",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_INV_ITEM_BRAND_BU"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_STORE",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_INV_ITEM_STORE_BG"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_STORE",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_INV_ITEM_STORE_BU"
+        );
     }
 
     private void ensureForeignKeyConstraint(
