@@ -3,6 +3,7 @@ package com.tse.erp.module.inventory.dto;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -22,6 +23,8 @@ public class InvItemStoreResponseDto {
     private String storeCode;
     private Integer isDefault;
     private Integer status;
+
+    private List<InvItemStoreEmployeeMapDto> assignedEmployees;
 
     private Long createdUserId;
     private String createdUserName;

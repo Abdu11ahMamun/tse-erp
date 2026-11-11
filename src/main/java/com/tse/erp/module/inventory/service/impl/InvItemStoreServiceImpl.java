@@ -13,16 +13,21 @@ import com.tse.erp.module.admin.repository.BusinessUnitRepository;
 import com.tse.erp.module.admin.repository.UserRepository;
 import com.tse.erp.module.hr.entity.Employee;
 import com.tse.erp.module.hr.repository.EmployeeRepository;
+import com.tse.erp.module.inventory.dto.InvItemStoreEmployeeMapDto;
 import com.tse.erp.module.inventory.dto.InvItemStoreRequestDto;
 import com.tse.erp.module.inventory.dto.InvItemStoreResponseDto;
 import com.tse.erp.module.inventory.entity.InvItemStore;
 import com.tse.erp.module.inventory.repository.InvItemStoreRepository;
+import com.tse.erp.module.inventory.service.InvItemStoreEmployeeMapService;
 import com.tse.erp.module.inventory.service.InvItemStoreService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -34,6 +39,7 @@ public class InvItemStoreServiceImpl implements InvItemStoreService {
     private final BusinessUnitRepository businessUnitRepository;
     private final UserRepository userRepository;
     private final EmployeeRepository employeeRepository;
+    private final InvItemStoreEmployeeMapService storeEmployeeMapService;
 
     @Override
     public List<InvItemStoreResponseDto> getAllItemStores(
@@ -112,7 +118,13 @@ public class InvItemStoreServiceImpl implements InvItemStoreService {
         entity.setStatus(request.getStatus() != null ? request.getStatus() : 1);
         entity.setCreatedApp(AppConstants.APP_NAME);
 
-        return toResponse(itemStoreRepository.save(entity));
+        InvItemStore saved = itemStoreRepository.save(entity);
+        List<Long> syncEmpIds = resolveEmployeeIds(request.getEmployeeIds(), request.getEmployeeId());
+        if (syncEmpIds != null && !syncEmpIds.isEmpty() && storeEmployeeMapService != null) {
+            storeEmployeeMapService.syncStoreEmployees(saved.getId(), saved.getBgId(), saved.getBuId(), syncEmpIds);
+        }
+
+        return toResponse(saved);
     }
 
     @Override
@@ -169,14 +181,42 @@ public class InvItemStoreServiceImpl implements InvItemStoreService {
         }
         existing.setUpdatedApp(AppConstants.APP_NAME);
 
-        return toResponse(itemStoreRepository.save(existing));
+        InvItemStore saved = itemStoreRepository.save(existing);
+        List<Long> updateEmpIds = resolveEmployeeIds(request.getEmployeeIds(), request.getEmployeeId());
+        if (updateEmpIds != null && storeEmployeeMapService != null) {
+            storeEmployeeMapService.syncStoreEmployees(saved.getId(), saved.getBgId(), saved.getBuId(), updateEmpIds);
+        }
+
+        return toResponse(saved);
     }
 
     @Override
     @Transactional
     public void deleteItemStore(Long id) {
         InvItemStore existing = findStore(id);
+        if (storeEmployeeMapService != null) {
+            storeEmployeeMapService.syncStoreEmployees(id, existing.getBgId(), existing.getBuId(), Collections.emptyList());
+        }
         itemStoreRepository.delete(existing);
+    }
+
+    private List<Long> resolveEmployeeIds(List<Long> employeeIds, String employeeId) {
+        if (employeeIds != null) {
+            return employeeIds.stream().filter(Objects::nonNull).distinct().toList();
+        }
+        if (employeeId != null && !employeeId.trim().isEmpty()) {
+            List<Long> list = new ArrayList<>();
+            for (String part : employeeId.split(",")) {
+                String clean = part.trim();
+                if (!clean.isEmpty()) {
+                    try {
+                        list.add(Long.parseLong(clean));
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            return list;
+        }
+        return null;
     }
 
     private InvItemStore findStore(Long id) {
@@ -219,6 +259,14 @@ public class InvItemStoreServiceImpl implements InvItemStoreService {
             }
         }
 
+        List<InvItemStoreEmployeeMapDto> assignedEmployees = null;
+        if (storeEmployeeMapService != null && entity.getId() != null) {
+            try {
+                assignedEmployees = storeEmployeeMapService.getEmployeesByStoreId(entity.getId());
+            } catch (Exception ignored) {
+            }
+        }
+
         return InvItemStoreResponseDto.builder()
                 .id(entity.getId())
                 .bgId(entity.getBgId())
@@ -229,6 +277,7 @@ public class InvItemStoreServiceImpl implements InvItemStoreService {
                 .storeCode(entity.getStoreCode())
                 .isDefault(entity.getIsDefault())
                 .status(entity.getStatus())
+                .assignedEmployees(assignedEmployees)
                 .createdUserId(entity.getCreatedUserId())
                 .createdUserName(createdUserName)
                 .createdEmpId(entity.getCreatedEmpId())

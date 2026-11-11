@@ -2,6 +2,8 @@ package com.tse.erp.module.inventory.dto;
 
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,5 +17,7 @@ public class InvItemStoreRequestDto {
     private String storeCode;
     private Integer isDefault;
     private Integer status;
+    private List<Long> employeeIds;
+    private String employeeId;
 }
 

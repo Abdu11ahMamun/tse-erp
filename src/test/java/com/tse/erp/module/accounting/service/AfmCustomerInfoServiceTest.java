@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -73,7 +74,11 @@ class AfmCustomerInfoServiceTest {
                 .businessType("Private Limited")
                 .phone("+8801700000000")
                 .email("rahim@example.com")
-                .creditLimit(new BigDecimal("100000.00"))
+                .creditLowerLimit(new BigDecimal("1000.50"))
+                .creditUpperLimit(new BigDecimal("100000.75"))
+                .agreementDateFrom(LocalDate.of(2025, 1, 1))
+                .agreementDateTo(LocalDate.of(2025, 12, 31))
+                .financeStatus("Draft")
                 .creditDays(45)
                 .currencyCode("BDT")
                 .shippingAddress("Chittagong Port Warehouse")
@@ -91,7 +96,11 @@ class AfmCustomerInfoServiceTest {
                 .businessType("Private Limited")
                 .phone("+8801700000000")
                 .email("rahim@example.com")
-                .creditLimit(new BigDecimal("100000.00"))
+                .creditLowerLimit(new BigDecimal("1000.50"))
+                .creditUpperLimit(new BigDecimal("100000.75"))
+                .agreementDateFrom(LocalDate.of(2025, 1, 1))
+                .agreementDateTo(LocalDate.of(2025, 12, 31))
+                .financeStatus("Draft")
                 .creditDays(45)
                 .currencyCode("BDT")
                 .shippingAddress("Chittagong Port Warehouse")
@@ -104,6 +113,8 @@ class AfmCustomerInfoServiceTest {
         assertThat(response.getId()).isEqualTo(200L);
         assertThat(response.getCustomerName()).isEqualTo("Rahim Corp");
         assertThat(response.getCustomerCode()).isEqualTo("CUS-00001");
+        assertThat(response.getAgreementDateFrom()).isEqualTo(LocalDate.of(2025, 1, 1));
+        assertThat(response.getAgreementDateTo()).isEqualTo(LocalDate.of(2025, 12, 31));
         assertThat(response.getShippingAddress()).isEqualTo("Chittagong Port Warehouse");
         verify(customerInfoRepository).save(any(AfmCustomerInfo.class));
     }

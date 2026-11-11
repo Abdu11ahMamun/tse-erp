@@ -40,6 +40,8 @@ class InvItemStoreServiceTest {
     private UserRepository userRepository;
     @Mock
     private EmployeeRepository employeeRepository;
+    @Mock
+    private InvItemStoreEmployeeMapService storeEmployeeMapService;
 
     @InjectMocks
     private InvItemStoreServiceImpl itemStoreService;

@@ -23,6 +23,8 @@ public interface AfmCustomerInfoService {
 
     void deleteCustomer(Long id);
 
+    AfmCustomerInfoResponseDto updateFinanceStatus(Long id, String financeStatus);
+
     String generateNextCustomerCode(Long buId);
 }
 

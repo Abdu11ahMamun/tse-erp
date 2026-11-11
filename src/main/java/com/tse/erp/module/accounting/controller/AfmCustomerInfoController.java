@@ -65,5 +65,15 @@ public class AfmCustomerInfoController {
         customerInfoService.deleteCustomer(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PatchMapping("/{id}/finance-status")
+    public ResponseEntity<AfmCustomerInfoResponseDto> updateFinanceStatus(
+            @PathVariable Long id,
+            @RequestParam(required = false) String status,
+            @RequestBody(required = false) Map<String, String> body
+    ) {
+        String targetStatus = status != null ? status : (body != null ? body.get("financeStatus") : null);
+        return ResponseEntity.ok(customerInfoService.updateFinanceStatus(id, targetStatus));
+    }
 }
 

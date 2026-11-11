@@ -107,12 +107,16 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
                 .taxRegistrationNo(cleanString(request.getTaxRegistrationNo()))
                 .tinNumber(cleanString(request.getTinNumber()))
                 .paymentTerms(cleanString(request.getPaymentTerms()))
-                .creditLimit(request.getCreditLimit() != null ? request.getCreditLimit() : BigDecimal.ZERO)
+                .creditLowerLimit(request.getCreditLowerLimit())
+                .creditUpperLimit(request.getCreditUpperLimit())
                 .creditDays(request.getCreditDays() != null ? request.getCreditDays() : 0)
                 .currencyCode(request.getCurrencyCode() != null ? request.getCurrencyCode().trim() : "BDT")
                 .openingBalance(request.getOpeningBalance() != null ? request.getOpeningBalance() : BigDecimal.ZERO)
                 .balanceType(cleanString(request.getBalanceType()))
                 .customerCategoryId(request.getCustomerCategoryId())
+                .agreementDateFrom(request.getAgreementDateFrom())
+                .agreementDateTo(request.getAgreementDateTo())
+                .financeStatus(request.getFinanceStatus() != null && !request.getFinanceStatus().trim().isEmpty() ? request.getFinanceStatus().trim() : "Draft")
                 .remarks(cleanString(request.getRemarks()))
                 .build();
 
@@ -165,12 +169,18 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
         existing.setTaxRegistrationNo(cleanString(request.getTaxRegistrationNo()));
         existing.setTinNumber(cleanString(request.getTinNumber()));
         existing.setPaymentTerms(cleanString(request.getPaymentTerms()));
-        existing.setCreditLimit(request.getCreditLimit() != null ? request.getCreditLimit() : BigDecimal.ZERO);
+        existing.setCreditLowerLimit(request.getCreditLowerLimit());
+        existing.setCreditUpperLimit(request.getCreditUpperLimit());
         existing.setCreditDays(request.getCreditDays() != null ? request.getCreditDays() : 0);
         existing.setCurrencyCode(request.getCurrencyCode() != null ? request.getCurrencyCode().trim() : "BDT");
         existing.setOpeningBalance(request.getOpeningBalance() != null ? request.getOpeningBalance() : BigDecimal.ZERO);
         existing.setBalanceType(cleanString(request.getBalanceType()));
         existing.setCustomerCategoryId(request.getCustomerCategoryId());
+        existing.setAgreementDateFrom(request.getAgreementDateFrom());
+        existing.setAgreementDateTo(request.getAgreementDateTo());
+        if (request.getFinanceStatus() != null && !request.getFinanceStatus().trim().isEmpty()) {
+            existing.setFinanceStatus(request.getFinanceStatus().trim());
+        }
         existing.setRemarks(cleanString(request.getRemarks()));
 
         if (request.getStatus() != null) {
@@ -188,6 +198,19 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
     public void deleteCustomer(Long id) {
         AfmCustomerInfo existing = findCustomer(id);
         customerInfoRepository.delete(existing);
+    }
+
+    @Override
+    @Transactional
+    public AfmCustomerInfoResponseDto updateFinanceStatus(Long id, String financeStatus) {
+        AfmCustomerInfo existing = findCustomer(id);
+        String targetStatus = (financeStatus != null && !financeStatus.trim().isEmpty())
+                ? financeStatus.trim()
+                : ("Approved".equalsIgnoreCase(existing.getFinanceStatus()) ? "Draft" : "Approved");
+        existing.setFinanceStatus(targetStatus);
+        existing.setUpdatedApp(AppConstants.APP_NAME);
+        AfmCustomerInfo saved = customerInfoRepository.save(existing);
+        return toResponse(saved);
     }
 
     private AfmCustomerInfo findCustomer(Long id) {
@@ -293,12 +316,16 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
                 .taxRegistrationNo(entity.getTaxRegistrationNo())
                 .tinNumber(entity.getTinNumber())
                 .paymentTerms(entity.getPaymentTerms())
-                .creditLimit(entity.getCreditLimit())
+                .creditLowerLimit(entity.getCreditLowerLimit())
+                .creditUpperLimit(entity.getCreditUpperLimit())
                 .creditDays(entity.getCreditDays())
                 .currencyCode(entity.getCurrencyCode())
                 .openingBalance(entity.getOpeningBalance())
                 .balanceType(entity.getBalanceType())
                 .customerCategoryId(entity.getCustomerCategoryId())
+                .agreementDateFrom(entity.getAgreementDateFrom())
+                .agreementDateTo(entity.getAgreementDateTo())
+                .financeStatus(entity.getFinanceStatus() != null && !entity.getFinanceStatus().trim().isEmpty() ? entity.getFinanceStatus().trim() : "Draft")
                 .remarks(entity.getRemarks())
                 .status(entity.getStatus())
                 .createdUserId(entity.getCreatedUserId())

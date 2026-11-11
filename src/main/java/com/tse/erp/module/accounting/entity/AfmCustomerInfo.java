@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "AFM_CUSTOMER_INFO")
@@ -83,8 +84,20 @@ public class AfmCustomerInfo extends BaseEntity {
     @Column(name = "PAYMENT_TERMS", length = 50)
     private String paymentTerms;
 
-    @Column(name = "CREDIT_LIMIT", precision = 18, scale = 2)
-    private BigDecimal creditLimit;
+    @Column(name = "CREDIT_LOWER_LIMIT", precision = 18, scale = 2)
+    private BigDecimal creditLowerLimit;
+
+    @Column(name = "CREDIT_UPPER_LIMIT", precision = 18, scale = 2)
+    private BigDecimal creditUpperLimit;
+
+    @Column(name = "AGREEMENT_DATE_FROM")
+    private LocalDate agreementDateFrom;
+
+    @Column(name = "AGREEMENT_DATE_TO")
+    private LocalDate agreementDateTo;
+
+    @Column(name = "FINANCE_STATUS", length = 20)
+    private String financeStatus;
 
     @Column(name = "CREDIT_DAYS")
     private Integer creditDays;

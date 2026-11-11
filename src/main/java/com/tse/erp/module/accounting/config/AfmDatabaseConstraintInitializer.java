@@ -244,6 +244,162 @@ public class AfmDatabaseConstraintInitializer implements ApplicationRunner {
                 "ID",
                 "FK_INV_ITEM_STORE_BU"
         );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_WAREHOUSE",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_INV_ITEM_WH_BG"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_WAREHOUSE",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_INV_ITEM_WH_BU"
+        );
+        ensureWarehouseStoreColumnIsVarchar();
+        ensureForeignKeyConstraint(
+                "INV_ITEM_ATTRIBUTE",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_INV_ITEM_ATTR_BG"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_ATTRIBUTE",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_INV_ITEM_ATTR_BU"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_INV_ITEM_BG"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_INV_ITEM_BU"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM",
+                "CATEGORY_ID",
+                "INV_ITEM_CATEGORY",
+                "ID",
+                "FK_INV_ITEM_CAT"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM",
+                "BRAND_ID",
+                "INV_ITEM_BRAND",
+                "ID",
+                "FK_INV_ITEM_BRAND"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM",
+                "UOM_ID",
+                "asset_uom",
+                "id",
+                "FK_INV_ITEM_UOM"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM",
+                "STORE_ID",
+                "INV_ITEM_STORE",
+                "ID",
+                "FK_INV_ITEM_STORE"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_ATTRIBUTE_DTLS",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_INV_ITEM_ATTR_DTLS_BG"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_ATTRIBUTE_DTLS",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_INV_ITEM_ATTR_DTLS_BU"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_ATTRIBUTE_DTLS",
+                "ITEM_ID",
+                "INV_ITEM",
+                "ID",
+                "FK_INV_ITEM_ATTR_DTLS_ITEM"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_ATTRIBUTE_DTLS",
+                "ATTRIBUTE_ID",
+                "INV_ITEM_ATTRIBUTE",
+                "ID",
+                "FK_INV_ITEM_ATTR_DTLS_ATTR"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_WAREHS_EMPL_MAP",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_INV_WH_EMP_BG"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_WAREHS_EMPL_MAP",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_INV_WH_EMP_BU"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_WAREHS_EMPL_MAP",
+                "WAREHOUSE_ID",
+                "INV_ITEM_WAREHOUSE",
+                "ID",
+                "FK_INV_WH_EMP_WH"
+        );
+        ensureWarehouseEmployeeColumnIsBigint();
+        ensureForeignKeyConstraint(
+                "INV_ITEM_WAREHS_EMPL_MAP",
+                "EMPLOYEE_ID",
+                "hr_employee",
+                "id",
+                "FK_INV_WH_EMP_EMP"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_STORE_EMPL_MAP",
+                "BG_ID",
+                "ADMIN_BG",
+                "ID",
+                "FK_INV_STR_EMP_BG"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_STORE_EMPL_MAP",
+                "BU_ID",
+                "ADMIN_BU",
+                "ID",
+                "FK_INV_STR_EMP_BU"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_STORE_EMPL_MAP",
+                "STORE_ID",
+                "INV_ITEM_STORE",
+                "ID",
+                "FK_INV_STR_EMP_STR"
+        );
+        ensureForeignKeyConstraint(
+                "INV_ITEM_STORE_EMPL_MAP",
+                "EMPLOYEE_ID",
+                "hr_employee",
+                "id",
+                "FK_INV_STR_EMP_EMP"
+        );
     }
 
     private void ensureForeignKeyConstraint(
@@ -280,6 +436,40 @@ public class AfmDatabaseConstraintInitializer implements ApplicationRunner {
         } catch (Exception ex) {
             log.warn("Could not automatically verify/add FK constraint {} on {}.{}: {}",
                     constraintName, tableName, columnName, ex.getMessage());
+        }
+    }
+
+    private void ensureWarehouseStoreColumnIsVarchar() {
+        try {
+            Integer existingCount = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS " +
+                    "WHERE TABLE_SCHEMA = DATABASE() " +
+                    "  AND TABLE_NAME = 'INV_ITEM_WAREHOUSE' " +
+                    "  AND CONSTRAINT_NAME = 'FK_INV_ITEM_WH_STORE'",
+                    Integer.class
+            );
+            if (existingCount != null && existingCount > 0) {
+                jdbcTemplate.execute("ALTER TABLE INV_ITEM_WAREHOUSE DROP FOREIGN KEY FK_INV_ITEM_WH_STORE");
+                log.info("Dropped FK constraint FK_INV_ITEM_WH_STORE on INV_ITEM_WAREHOUSE.STORE_ID");
+            }
+        } catch (Exception ex) {
+            log.warn("Could not check/drop FK constraint FK_INV_ITEM_WH_STORE: {}", ex.getMessage());
+        }
+
+        try {
+            jdbcTemplate.execute("ALTER TABLE INV_ITEM_WAREHOUSE MODIFY COLUMN STORE_ID VARCHAR(500) NULL");
+            log.info("Ensured INV_ITEM_WAREHOUSE.STORE_ID is VARCHAR(500)");
+        } catch (Exception ex) {
+            log.warn("Could not alter INV_ITEM_WAREHOUSE.STORE_ID to VARCHAR(500): {}", ex.getMessage());
+        }
+    }
+
+    private void ensureWarehouseEmployeeColumnIsBigint() {
+        try {
+            jdbcTemplate.execute("ALTER TABLE INV_ITEM_WAREHS_EMPL_MAP MODIFY COLUMN EMPLOYEE_ID BIGINT(20) NOT NULL");
+            log.info("Ensured INV_ITEM_WAREHS_EMPL_MAP.EMPLOYEE_ID is BIGINT(20)");
+        } catch (Exception ex) {
+            log.warn("Could not alter INV_ITEM_WAREHS_EMPL_MAP.EMPLOYEE_ID to BIGINT(20): {}", ex.getMessage());
         }
     }
 }
