@@ -1,5 +1,7 @@
 package com.tse.erp.module.accounting.controller;
 
+import com.tse.erp.module.accounting.dto.AfmCustFinAgreementRequestDto;
+import com.tse.erp.module.accounting.dto.AfmCustFinAgreementResponseDto;
 import com.tse.erp.module.accounting.dto.AfmCustomerInfoRequestDto;
 import com.tse.erp.module.accounting.dto.AfmCustomerInfoResponseDto;
 import com.tse.erp.module.accounting.service.AfmCustomerInfoService;
@@ -74,6 +76,19 @@ public class AfmCustomerInfoController {
     ) {
         String targetStatus = status != null ? status : (body != null ? body.get("financeStatus") : null);
         return ResponseEntity.ok(customerInfoService.updateFinanceStatus(id, targetStatus));
+    }
+
+    @GetMapping("/{id}/financial-agreements")
+    public ResponseEntity<List<AfmCustFinAgreementResponseDto>> getFinancialAgreements(@PathVariable Long id) {
+        return ResponseEntity.ok(customerInfoService.getFinancialAgreementsByCustomerId(id));
+    }
+
+    @PostMapping("/{id}/financial-agreements")
+    public ResponseEntity<AfmCustomerInfoResponseDto> createNewAgreement(
+            @PathVariable Long id,
+            @RequestBody AfmCustFinAgreementRequestDto request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(customerInfoService.createNewAgreement(id, request));
     }
 }
 

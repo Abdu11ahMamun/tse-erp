@@ -5,9 +5,13 @@ import com.tse.erp.common.StatusUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
+import com.tse.erp.module.accounting.dto.AfmCustFinAgreementRequestDto;
+import com.tse.erp.module.accounting.dto.AfmCustFinAgreementResponseDto;
 import com.tse.erp.module.accounting.dto.AfmCustomerInfoRequestDto;
 import com.tse.erp.module.accounting.dto.AfmCustomerInfoResponseDto;
+import com.tse.erp.module.accounting.entity.AfmCustFinAgreement;
 import com.tse.erp.module.accounting.entity.AfmCustomerInfo;
+import com.tse.erp.module.accounting.repository.AfmCustFinAgreementRepository;
 import com.tse.erp.module.accounting.repository.AfmCustomerInfoRepository;
 import com.tse.erp.module.accounting.service.AfmCustomerInfoService;
 import com.tse.erp.module.admin.entity.BusinessGroup;
@@ -23,7 +27,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -31,6 +37,7 @@ import java.util.Optional;
 public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
 
     private final AfmCustomerInfoRepository customerInfoRepository;
+    private final AfmCustFinAgreementRepository custFinAgreementRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
     private final UserRepository userRepository;
@@ -125,7 +132,24 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
         entity.setStatus(status);
         entity.setCreatedApp(AppConstants.APP_NAME);
 
+        if ("Approved".equalsIgnoreCase(entity.getFinanceStatus())) {
+            validateFinancialBlockMandatory(
+                    entity.getPaymentTerms(),
+                    entity.getCurrencyCode(),
+                    entity.getCreditLowerLimit(),
+                    entity.getCreditUpperLimit(),
+                    entity.getCreditDays(),
+                    entity.getOpeningBalance(),
+                    entity.getBalanceType(),
+                    entity.getAgreementDateFrom(),
+                    entity.getAgreementDateTo()
+            );
+        }
+
         AfmCustomerInfo saved = customerInfoRepository.save(entity);
+        if ("Approved".equalsIgnoreCase(saved.getFinanceStatus())) {
+            syncFinancialAgreement(saved);
+        }
         return toResponse(saved);
     }
 
@@ -168,19 +192,39 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
         existing.setShippingAddress(cleanString(request.getShippingAddress()));
         existing.setTaxRegistrationNo(cleanString(request.getTaxRegistrationNo()));
         existing.setTinNumber(cleanString(request.getTinNumber()));
-        existing.setPaymentTerms(cleanString(request.getPaymentTerms()));
-        existing.setCreditLowerLimit(request.getCreditLowerLimit());
-        existing.setCreditUpperLimit(request.getCreditUpperLimit());
-        existing.setCreditDays(request.getCreditDays() != null ? request.getCreditDays() : 0);
-        existing.setCurrencyCode(request.getCurrencyCode() != null ? request.getCurrencyCode().trim() : "BDT");
-        existing.setOpeningBalance(request.getOpeningBalance() != null ? request.getOpeningBalance() : BigDecimal.ZERO);
-        existing.setBalanceType(cleanString(request.getBalanceType()));
-        existing.setCustomerCategoryId(request.getCustomerCategoryId());
-        existing.setAgreementDateFrom(request.getAgreementDateFrom());
-        existing.setAgreementDateTo(request.getAgreementDateTo());
-        if (request.getFinanceStatus() != null && !request.getFinanceStatus().trim().isEmpty()) {
-            existing.setFinanceStatus(request.getFinanceStatus().trim());
+        boolean wasApproved = "Approved".equalsIgnoreCase(existing.getFinanceStatus());
+        boolean targetApproved = request.getFinanceStatus() != null && "Approved".equalsIgnoreCase(request.getFinanceStatus().trim());
+
+        if (!wasApproved && targetApproved) {
+            validateFinancialBlockMandatory(
+                    request.getPaymentTerms(),
+                    request.getCurrencyCode(),
+                    request.getCreditLowerLimit(),
+                    request.getCreditUpperLimit(),
+                    request.getCreditDays(),
+                    request.getOpeningBalance(),
+                    request.getBalanceType(),
+                    request.getAgreementDateFrom(),
+                    request.getAgreementDateTo()
+            );
         }
+
+        // Only allow updating financial block if not already approved; approved customer financial info is readonly
+        if (!wasApproved) {
+            existing.setPaymentTerms(cleanString(request.getPaymentTerms()));
+            existing.setCreditLowerLimit(request.getCreditLowerLimit());
+            existing.setCreditUpperLimit(request.getCreditUpperLimit());
+            existing.setCreditDays(request.getCreditDays() != null ? request.getCreditDays() : 0);
+            existing.setCurrencyCode(request.getCurrencyCode() != null ? request.getCurrencyCode().trim() : "BDT");
+            existing.setOpeningBalance(request.getOpeningBalance() != null ? request.getOpeningBalance() : BigDecimal.ZERO);
+            existing.setBalanceType(cleanString(request.getBalanceType()));
+            existing.setAgreementDateFrom(request.getAgreementDateFrom());
+            existing.setAgreementDateTo(request.getAgreementDateTo());
+            if (request.getFinanceStatus() != null && !request.getFinanceStatus().trim().isEmpty()) {
+                existing.setFinanceStatus(request.getFinanceStatus().trim());
+            }
+        }
+        existing.setCustomerCategoryId(request.getCustomerCategoryId());
         existing.setRemarks(cleanString(request.getRemarks()));
 
         if (request.getStatus() != null) {
@@ -190,6 +234,11 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
         existing.setUpdatedApp(AppConstants.APP_NAME);
 
         AfmCustomerInfo saved = customerInfoRepository.save(existing);
+        if ("Approved".equalsIgnoreCase(saved.getFinanceStatus())) {
+            syncFinancialAgreement(saved);
+        } else {
+            inactivateAgreements(saved.getId());
+        }
         return toResponse(saved);
     }
 
@@ -197,6 +246,10 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
     @Transactional
     public void deleteCustomer(Long id) {
         AfmCustomerInfo existing = findCustomer(id);
+        List<AfmCustFinAgreement> agreements = custFinAgreementRepository.findByCustomerIdOrderByIdDesc(id);
+        if (!agreements.isEmpty()) {
+            custFinAgreementRepository.deleteAll(agreements);
+        }
         customerInfoRepository.delete(existing);
     }
 
@@ -207,9 +260,89 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
         String targetStatus = (financeStatus != null && !financeStatus.trim().isEmpty())
                 ? financeStatus.trim()
                 : ("Approved".equalsIgnoreCase(existing.getFinanceStatus()) ? "Draft" : "Approved");
+
+        if ("Approved".equalsIgnoreCase(targetStatus)) {
+            validateFinancialBlockMandatory(
+                    existing.getPaymentTerms(),
+                    existing.getCurrencyCode(),
+                    existing.getCreditLowerLimit(),
+                    existing.getCreditUpperLimit(),
+                    existing.getCreditDays(),
+                    existing.getOpeningBalance(),
+                    existing.getBalanceType(),
+                    existing.getAgreementDateFrom(),
+                    existing.getAgreementDateTo()
+            );
+        }
+
         existing.setFinanceStatus(targetStatus);
         existing.setUpdatedApp(AppConstants.APP_NAME);
         AfmCustomerInfo saved = customerInfoRepository.save(existing);
+        if ("Approved".equalsIgnoreCase(saved.getFinanceStatus())) {
+            syncFinancialAgreement(saved);
+        } else {
+            inactivateAgreements(saved.getId());
+        }
+        return toResponse(saved);
+    }
+
+    @Override
+    @Transactional
+    public AfmCustomerInfoResponseDto createNewAgreement(Long customerId, AfmCustFinAgreementRequestDto request) {
+        if (request == null) {
+            throw new BadRequestException("Agreement data cannot be empty");
+        }
+        AfmCustomerInfo customer = findCustomer(customerId);
+
+        validateFinancialBlockMandatory(
+                request.getPaymentTerms(),
+                request.getCurrencyCode(),
+                request.getCreditLowerLimit(),
+                request.getCreditUpperLimit(),
+                request.getCreditDays(),
+                request.getOpeningBalance(),
+                request.getBalanceType(),
+                request.getAgreementDateFrom(),
+                request.getAgreementDateTo()
+        );
+
+        // Update customer's 5. Payment & Financial Information block data with latest submitted data
+        customer.setPaymentTerms(cleanString(request.getPaymentTerms()));
+        customer.setCurrencyCode(request.getCurrencyCode() != null ? request.getCurrencyCode().trim() : "BDT");
+        customer.setCreditLowerLimit(request.getCreditLowerLimit());
+        customer.setCreditUpperLimit(request.getCreditUpperLimit());
+        customer.setCreditDays(request.getCreditDays());
+        customer.setOpeningBalance(request.getOpeningBalance());
+        customer.setBalanceType(cleanString(request.getBalanceType()));
+        customer.setAgreementDateFrom(request.getAgreementDateFrom());
+        customer.setAgreementDateTo(request.getAgreementDateTo());
+        customer.setFinanceStatus("Approved");
+        customer.setUpdatedApp(AppConstants.APP_NAME);
+        AfmCustomerInfo saved = customerInfoRepository.save(customer);
+
+        // Inactivate all previous approved agreements of that customer (STATUS = 0)
+        inactivateAgreements(customerId);
+
+        // Insert new agreement record into AFM_CUST_FIN_AGREEMENT with STATUS = 1 and FINANCE_STATUS = "Approved"
+        AfmCustFinAgreement newAgreement = AfmCustFinAgreement.builder()
+                .bgId(saved.getBgId())
+                .buId(saved.getBuId())
+                .customerId(saved.getId())
+                .paymentTerms(saved.getPaymentTerms())
+                .currencyCode(saved.getCurrencyCode())
+                .creditLowerLimit(saved.getCreditLowerLimit())
+                .creditUpperLimit(saved.getCreditUpperLimit())
+                .creditDays(saved.getCreditDays())
+                .openingBalance(saved.getOpeningBalance())
+                .balanceType(saved.getBalanceType())
+                .agreementDateFrom(saved.getAgreementDateFrom())
+                .agreementDateTo(saved.getAgreementDateTo())
+                .financeStatus("Approved")
+                .build();
+        newAgreement.setStatus(1);
+        newAgreement.setCreatedApp(AppConstants.APP_NAME);
+        custFinAgreementRepository.save(newAgreement);
+
         return toResponse(saved);
     }
 
@@ -250,6 +383,52 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
         }
     }
 
+    private void validateFinancialBlockMandatory(
+            String paymentTerms,
+            String currencyCode,
+            BigDecimal creditLowerLimit,
+            BigDecimal creditUpperLimit,
+            Integer creditDays,
+            BigDecimal openingBalance,
+            String balanceType,
+            LocalDate agreementDateFrom,
+            LocalDate agreementDateTo
+    ) {
+        if (paymentTerms == null || paymentTerms.trim().isEmpty()) {
+            throw new BadRequestException("Payment Terms is required when Finance Status is Approved");
+        }
+        if (currencyCode == null || currencyCode.trim().isEmpty()) {
+            throw new BadRequestException("Currency Code is required when Finance Status is Approved");
+        }
+        if (creditLowerLimit == null) {
+            throw new BadRequestException("Credit Lower Limit is required when Finance Status is Approved");
+        }
+        if (creditUpperLimit == null) {
+            throw new BadRequestException("Credit Upper Limit is required when Finance Status is Approved");
+        }
+        if (creditUpperLimit.compareTo(creditLowerLimit) < 0) {
+            throw new BadRequestException("Credit Upper Limit must be greater than or equal to Credit Lower Limit");
+        }
+        if (creditDays == null) {
+            throw new BadRequestException("Credit Days is required when Finance Status is Approved");
+        }
+        if (openingBalance == null) {
+            throw new BadRequestException("Opening Balance is required when Finance Status is Approved");
+        }
+        if (balanceType == null || balanceType.trim().isEmpty()) {
+            throw new BadRequestException("Balance Type is required when Finance Status is Approved");
+        }
+        if (agreementDateFrom == null) {
+            throw new BadRequestException("Agreement Date (From) is required when Finance Status is Approved");
+        }
+        if (agreementDateTo == null) {
+            throw new BadRequestException("Agreement Date (To) is required when Finance Status is Approved");
+        }
+        if (agreementDateTo.isBefore(agreementDateFrom)) {
+            throw new BadRequestException("Agreement Date (To) must be on or after Agreement Date (From)");
+        }
+    }
+
     private String cleanString(String val) {
         return (val != null && !val.trim().isEmpty()) ? val.trim() : null;
     }
@@ -276,6 +455,12 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
                     .map(this::formatEmployeeDisplay)
                     .orElse(null);
         }
+
+        Long activeAgreementId = entity.getId() != null
+                ? custFinAgreementRepository.findFirstByCustomerIdAndStatusOrderByIdDesc(entity.getId(), 1)
+                        .map(AfmCustFinAgreement::getId)
+                        .orElse(null)
+                : null;
 
         String updatedUserName = null;
         if (entity.getUpdatedUserId() != null) {
@@ -326,6 +511,7 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
                 .agreementDateFrom(entity.getAgreementDateFrom())
                 .agreementDateTo(entity.getAgreementDateTo())
                 .financeStatus(entity.getFinanceStatus() != null && !entity.getFinanceStatus().trim().isEmpty() ? entity.getFinanceStatus().trim() : "Draft")
+                .activeAgreementId(activeAgreementId)
                 .remarks(entity.getRemarks())
                 .status(entity.getStatus())
                 .createdUserId(entity.getCreatedUserId())
@@ -340,6 +526,121 @@ public class AfmCustomerInfoServiceImpl implements AfmCustomerInfoService {
                 .updatedEmpName(updatedEmpName)
                 .updatedDatetime(entity.getUpdatedDatetime())
                 .updatedApp(entity.getUpdatedApp())
+                .build();
+    }
+
+    @Override
+    public List<AfmCustFinAgreementResponseDto> getFinancialAgreementsByCustomerId(Long customerId) {
+        return custFinAgreementRepository.findByCustomerIdOrderByIdDesc(customerId)
+                .stream()
+                .map(this::toAgreementResponse)
+                .toList();
+    }
+
+    private void syncFinancialAgreement(AfmCustomerInfo customer) {
+        if (customer == null || customer.getId() == null) {
+            return;
+        }
+        if (!"Approved".equalsIgnoreCase(customer.getFinanceStatus())) {
+            return;
+        }
+
+        Optional<AfmCustFinAgreement> currentActiveOpt = custFinAgreementRepository
+                .findFirstByCustomerIdAndStatusOrderByIdDesc(customer.getId(), 1);
+
+        if (currentActiveOpt.isPresent()) {
+            AfmCustFinAgreement currentActive = currentActiveOpt.get();
+            if (!isFinancialInfoChanged(currentActive, customer)) {
+                return;
+            }
+        }
+
+        inactivateAgreements(customer.getId());
+
+        AfmCustFinAgreement newAgreement = AfmCustFinAgreement.builder()
+                .bgId(customer.getBgId())
+                .buId(customer.getBuId())
+                .customerId(customer.getId())
+                .paymentTerms(customer.getPaymentTerms())
+                .currencyCode(customer.getCurrencyCode())
+                .creditLowerLimit(customer.getCreditLowerLimit())
+                .creditUpperLimit(customer.getCreditUpperLimit())
+                .creditDays(customer.getCreditDays())
+                .openingBalance(customer.getOpeningBalance())
+                .balanceType(customer.getBalanceType())
+                .agreementDateFrom(customer.getAgreementDateFrom())
+                .agreementDateTo(customer.getAgreementDateTo())
+                .financeStatus("Approved")
+                .build();
+
+        newAgreement.setStatus(1);
+        newAgreement.setCreatedApp(AppConstants.APP_NAME);
+        custFinAgreementRepository.save(newAgreement);
+    }
+
+    private void inactivateAgreements(Long customerId) {
+        List<AfmCustFinAgreement> list = custFinAgreementRepository.findByCustomerIdOrderByIdDesc(customerId);
+        for (AfmCustFinAgreement a : list) {
+            if (a.getStatus() == null || a.getStatus() != 0) {
+                a.setStatus(0);
+                a.setUpdatedApp(AppConstants.APP_NAME);
+                custFinAgreementRepository.save(a);
+            }
+        }
+    }
+
+    private boolean isFinancialInfoChanged(AfmCustFinAgreement current, AfmCustomerInfo updated) {
+        if (current == null) return true;
+        return !Objects.equals(current.getPaymentTerms(), updated.getPaymentTerms())
+                || !Objects.equals(current.getCurrencyCode(), updated.getCurrencyCode())
+                || !isEqualBigDecimal(current.getCreditLowerLimit(), updated.getCreditLowerLimit())
+                || !isEqualBigDecimal(current.getCreditUpperLimit(), updated.getCreditUpperLimit())
+                || !Objects.equals(current.getCreditDays(), updated.getCreditDays())
+                || !isEqualBigDecimal(current.getOpeningBalance(), updated.getOpeningBalance())
+                || !Objects.equals(current.getBalanceType(), updated.getBalanceType())
+                || !Objects.equals(current.getAgreementDateFrom(), updated.getAgreementDateFrom())
+                || !Objects.equals(current.getAgreementDateTo(), updated.getAgreementDateTo());
+    }
+
+    private boolean isEqualBigDecimal(BigDecimal a, BigDecimal b) {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return a.compareTo(b) == 0;
+    }
+
+    private AfmCustFinAgreementResponseDto toAgreementResponse(AfmCustFinAgreement entity) {
+        String createdUserName = null;
+        if (entity.getCreatedUserId() != null) {
+            createdUserName = userRepository.findById(entity.getCreatedUserId())
+                    .map(User::getUserName)
+                    .orElse(null);
+        }
+
+        return AfmCustFinAgreementResponseDto.builder()
+                .id(entity.getId())
+                .bgId(entity.getBgId())
+                .buId(entity.getBuId())
+                .customerId(entity.getCustomerId())
+                .paymentTerms(entity.getPaymentTerms())
+                .currencyCode(entity.getCurrencyCode())
+                .creditLowerLimit(entity.getCreditLowerLimit())
+                .creditUpperLimit(entity.getCreditUpperLimit())
+                .creditDays(entity.getCreditDays())
+                .openingBalance(entity.getOpeningBalance())
+                .balanceType(entity.getBalanceType())
+                .agreementDateFrom(entity.getAgreementDateFrom())
+                .agreementDateTo(entity.getAgreementDateTo())
+                .financeStatus(entity.getFinanceStatus())
+                .createdUserId(entity.getCreatedUserId())
+                .createdUserName(createdUserName)
+                .createdEmpId(entity.getCreatedEmpId())
+                .createdDatetime(entity.getCreatedDatetime())
+                .updatedUserId(entity.getUpdatedUserId())
+                .updatedEmpId(entity.getUpdatedEmpId())
+                .updatedDatetime(entity.getUpdatedDatetime())
+                .createdApp(entity.getCreatedApp())
+                .updatedApp(entity.getUpdatedApp())
+                .status(entity.getStatus())
                 .build();
     }
 

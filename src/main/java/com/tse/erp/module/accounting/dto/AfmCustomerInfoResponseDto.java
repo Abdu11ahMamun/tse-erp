@@ -51,6 +51,7 @@ public class AfmCustomerInfoResponseDto {
     private LocalDate agreementDateFrom;
     private LocalDate agreementDateTo;
     private String financeStatus;
+    private Long activeAgreementId;
 
     private Long customerCategoryId;
     private String customerCategoryName;
