@@ -184,6 +184,30 @@ class AfmPeriodServiceTest {
     }
 
     @Test
+    void getCandidateMonths_WhenOpen_ReturnsActiveOpenedPeriods() {
+        AfmPeriod openPeriod = AfmPeriod.builder()
+                .id(101L)
+                .buId(10L)
+                .bgId(1L)
+                .periodYear("2025")
+                .periodName("Jan-2025")
+                .periodStatus("Open")
+                .build();
+        openPeriod.setStatus(1);
+
+        when(calendarMonthRepository.findByBuIdAndYear(10L, "2025"))
+                .thenReturn(Collections.emptyList());
+        when(periodRepository.findByBuIdAndPeriodYearOrderByIdDesc(10L, "2025"))
+                .thenReturn(List.of(openPeriod));
+
+        List<AfmCalendarMonthDto> candidates = periodService.getCandidateMonths(10L, "2025", "Open");
+
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.get(0).getPeriodName()).isEqualTo("Jan-2025");
+        assertThat(candidates.get(0).getPeriodStatus()).isEqualTo("Open");
+    }
+
+    @Test
     void createPeriod_Duplicate_ThrowsDuplicateException() {
         when(businessGroupRepository.findById(1L)).thenReturn(Optional.of(businessGroup));
         when(businessUnitRepository.findById(10L)).thenReturn(Optional.of(businessUnit));

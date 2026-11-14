@@ -118,18 +118,18 @@ public class AfmBankChequeMapServiceImpl implements AfmBankChequeMapService {
         if (from < 0 || to < 0) {
             throw new BadRequestException("Cheque numbers cannot be negative");
         }
-        if (to <= from) {
-            throw new BadRequestException("To Cheque (" + toStr + ") must be greater than From Cheque (" + fromStr + ")");
+        if (to < from) {
+            throw new BadRequestException("To Cheque (" + toStr + ") must be greater than or equal to From Cheque (" + fromStr + ")");
         }
 
-        long count = to - from;
+        long count = (to - from) + 1;
         if (count > MAX_BATCH_SIZE) {
             throw new BadRequestException("Maximum allowed batch size is " + MAX_BATCH_SIZE + " cheques per range (requested " + count + ")");
         }
 
         int width = fromStr.trim().length();
         List<String> generatedChequeNos = new ArrayList<>((int) count);
-        for (long i = from; i < to; i++) {
+        for (long i = from; i <= to; i++) {
             generatedChequeNos.add(String.format("%0" + width + "d", i));
         }
 

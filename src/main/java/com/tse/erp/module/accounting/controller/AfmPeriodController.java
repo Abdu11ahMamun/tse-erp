@@ -57,9 +57,10 @@ public class AfmPeriodController {
 
     @GetMapping("/open-periods")
     public ResponseEntity<List<String>> getOpenPeriodNames(
+            @RequestParam(required = false) Long bgId,
             @RequestParam Long buId,
             @RequestParam(required = false) String year) {
-        return ResponseEntity.ok(periodService.getOpenPeriodNames(buId, year));
+        return ResponseEntity.ok(periodService.getOpenPeriodNames(bgId, buId, year));
     }
 
     @GetMapping("/years")
@@ -70,9 +71,10 @@ public class AfmPeriodController {
 
     @GetMapping("/candidate-months")
     public ResponseEntity<List<AfmCalendarMonthDto>> getCandidateMonths(
+            @RequestParam(required = false) Long bgId,
             @RequestParam Long buId,
             @RequestParam String year,
             @RequestParam String monthPeriodStatus) {
-        return ResponseEntity.ok(periodService.getCandidateMonths(buId, year, monthPeriodStatus));
+        return ResponseEntity.ok(periodService.getCandidateMonths(bgId, buId, year, monthPeriodStatus));
     }
 }

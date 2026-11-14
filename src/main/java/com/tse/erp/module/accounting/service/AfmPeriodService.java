@@ -25,7 +25,11 @@ public interface AfmPeriodService {
 
     List<String> getOpenPeriodNames(Long buId, String year);
 
+    List<String> getOpenPeriodNames(Long bgId, Long buId, String year);
+
     List<String> getAvailableYears(Long buId);
 
     List<AfmCalendarMonthDto> getCandidateMonths(Long buId, String year, String monthPeriodStatus);
+
+    List<AfmCalendarMonthDto> getCandidateMonths(Long bgId, Long buId, String year, String monthPeriodStatus);
 }
