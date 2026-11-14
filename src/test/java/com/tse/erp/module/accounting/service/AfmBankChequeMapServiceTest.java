@@ -99,7 +99,7 @@ class AfmBankChequeMapServiceTest {
                 .bankId(100L)
                 .bankAccountId(200L)
                 .chequeNoFrom("1000")
-                .chequeNoTo("1005")
+                .chequeNoTo("1004")
                 .chequeStatus("Not Use")
                 .status(1)
                 .build();
@@ -110,7 +110,7 @@ class AfmBankChequeMapServiceTest {
         assertThat(result.stream().map(AfmBankChequeMapResponseDto::getChequeNo))
                 .containsExactly("1000", "1001", "1002", "1003", "1004");
         assertThat(result.get(0).getChequeNoFrom()).isEqualTo("1000");
-        assertThat(result.get(0).getChequeNoTo()).isEqualTo("1005");
+        assertThat(result.get(0).getChequeNoTo()).isEqualTo("1004");
         assertThat(result.get(0).getChequeStatus()).isEqualTo("Not Use");
         assertThat(result.get(0).getBankName()).isEqualTo("Sonali Bank");
         assertThat(result.get(0).getAccountNumber()).isEqualTo("123456789");

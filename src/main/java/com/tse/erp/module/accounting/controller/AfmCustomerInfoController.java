@@ -1,5 +1,7 @@
 package com.tse.erp.module.accounting.controller;
 
+import com.tse.erp.module.accounting.dto.AfmCustFinAgreementRequestDto;
+import com.tse.erp.module.accounting.dto.AfmCustFinAgreementResponseDto;
 import com.tse.erp.module.accounting.dto.AfmCustomerInfoRequestDto;
 import com.tse.erp.module.accounting.dto.AfmCustomerInfoResponseDto;
 import com.tse.erp.module.accounting.service.AfmCustomerInfoService;
@@ -64,6 +66,29 @@ public class AfmCustomerInfoController {
     public ResponseEntity<Void> deleteCustomer(@PathVariable Long id) {
         customerInfoService.deleteCustomer(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/finance-status")
+    public ResponseEntity<AfmCustomerInfoResponseDto> updateFinanceStatus(
+            @PathVariable Long id,
+            @RequestParam(required = false) String status,
+            @RequestBody(required = false) Map<String, String> body
+    ) {
+        String targetStatus = status != null ? status : (body != null ? body.get("financeStatus") : null);
+        return ResponseEntity.ok(customerInfoService.updateFinanceStatus(id, targetStatus));
+    }
+
+    @GetMapping("/{id}/financial-agreements")
+    public ResponseEntity<List<AfmCustFinAgreementResponseDto>> getFinancialAgreements(@PathVariable Long id) {
+        return ResponseEntity.ok(customerInfoService.getFinancialAgreementsByCustomerId(id));
+    }
+
+    @PostMapping("/{id}/financial-agreements")
+    public ResponseEntity<AfmCustomerInfoResponseDto> createNewAgreement(
+            @PathVariable Long id,
+            @RequestBody AfmCustFinAgreementRequestDto request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(customerInfoService.createNewAgreement(id, request));
     }
 }
 

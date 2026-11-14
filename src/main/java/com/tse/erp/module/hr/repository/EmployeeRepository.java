@@ -14,6 +14,10 @@ public interface EmployeeRepository
 
     List<Employee> findByBuIdOrderByIdDesc(Long buId);
 
+    List<Employee> findByBgIdOrderByIdDesc(Long bgId);
+
+    List<Employee> findByBgIdAndBuIdOrderByIdDesc(Long bgId, Long buId);
+
     List<Employee> findByNid(String nid);
 
     List<Employee> findByPassportNoIgnoreCase(String passportNo);

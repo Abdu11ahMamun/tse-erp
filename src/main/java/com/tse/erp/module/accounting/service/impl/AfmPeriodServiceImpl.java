@@ -88,18 +88,38 @@ public class AfmPeriodServiceImpl implements AfmPeriodService {
         String year = request.getPeriodYear().trim();
         String name = request.getPeriodName().trim();
 
-        boolean exists = periodRepository.existsByBuIdAndPeriodYearAndPeriodNameIgnoreCase(
+        String periodStatus = request.getPeriodStatus() != null && !request.getPeriodStatus().trim().isEmpty()
+                ? request.getPeriodStatus().trim()
+                : "Open";
+
+        List<AfmPeriod> existingList = periodRepository.findByBuIdAndPeriodYearAndPeriodNameIgnoreCase(
                 request.getBuId(), year, name
         );
-        if (exists) {
+        if (!existingList.isEmpty()) {
+            AfmPeriod existing = existingList.get(0);
+            if (existing.getPeriodStatus() != null && existing.getPeriodStatus().trim().equalsIgnoreCase(periodStatus)) {
+                throw new DuplicateResourceException(
+                        "Accounting Period '" + name + "' for Year " + year + " already exists for this Business Unit"
+                );
+            }
+            existing.setPeriodStatus(periodStatus);
+            if (request.getStatus() != null) {
+                existing.setStatus(request.getStatus());
+            }
+            if (request.getAfmCalendarMonthId() != null) {
+                existing.setAfmCalendarMonthId(request.getAfmCalendarMonthId());
+            }
+            if (request.getBgId() != null) {
+                existing.setBgId(request.getBgId());
+            }
+            AfmPeriod saved = periodRepository.save(existing);
+            syncCalendarMonthStatus(saved.getBuId(), saved.getPeriodYear(), saved.getPeriodName(), saved.getAfmCalendarMonthId(), saved.getPeriodStatus());
+            return toResponse(saved);
+        } else if (periodRepository.existsByBuIdAndPeriodYearAndPeriodNameIgnoreCase(request.getBuId(), year, name)) {
             throw new DuplicateResourceException(
                     "Accounting Period '" + name + "' for Year " + year + " already exists for this Business Unit"
             );
         }
-
-        String periodStatus = request.getPeriodStatus() != null && !request.getPeriodStatus().trim().isEmpty()
-                ? request.getPeriodStatus().trim()
-                : "Open";
 
         AfmPeriod entity = AfmPeriod.builder()
                 .bgId(request.getBgId())
@@ -199,11 +219,50 @@ public class AfmPeriodServiceImpl implements AfmPeriodService {
 
     @Override
     public List<String> getOpenPeriodNames(Long buId, String year) {
+        return getOpenPeriodNames(null, buId, year);
+    }
+
+    @Override
+    public List<String> getOpenPeriodNames(Long bgId, Long buId, String year) {
         if (buId == null) {
             return Collections.emptyList();
         }
         String cleanYear = (year != null && !year.trim().isEmpty()) ? year.trim() : null;
-        return calendarMonthRepository.findOpenPeriodNamesByBuIdAndYear(buId, cleanYear);
+
+        List<AfmPeriod> periods;
+        if (bgId != null) {
+            periods = periodRepository.findByBgIdAndBuIdAndStatusOrderByIdDesc(bgId, buId, 1);
+        } else {
+            periods = periodRepository.findByBuIdAndStatusOrderByIdDesc(buId, 1);
+        }
+
+        Set<String> closedInPeriod = periods.stream()
+                .filter(p -> p.getPeriodStatus() != null && p.getPeriodStatus().trim().equalsIgnoreCase("close"))
+                .map(p -> p.getPeriodName() != null ? p.getPeriodName().trim().toLowerCase() : "")
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+
+        Set<String> openNames = new LinkedHashSet<>();
+
+        List<String> calendarOpen = calendarMonthRepository.findOpenPeriodNamesByBuIdAndYear(buId, cleanYear);
+        if (calendarOpen != null) {
+            for (String cName : calendarOpen) {
+                if (cName != null && !cName.trim().isEmpty() && !closedInPeriod.contains(cName.trim().toLowerCase())) {
+                    openNames.add(cName.trim());
+                }
+            }
+        }
+
+        periods.stream()
+                .filter(p -> cleanYear == null || (p.getPeriodYear() != null && p.getPeriodYear().trim().equalsIgnoreCase(cleanYear)))
+                .filter(p -> p.getPeriodStatus() != null && p.getPeriodStatus().trim().equalsIgnoreCase("open"))
+                .map(AfmPeriod::getPeriodName)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .forEach(openNames::add);
+
+        return new ArrayList<>(openNames);
     }
 
     @Override
@@ -216,6 +275,11 @@ public class AfmPeriodServiceImpl implements AfmPeriodService {
 
     @Override
     public List<AfmCalendarMonthDto> getCandidateMonths(Long buId, String year, String monthPeriodStatus) {
+        return getCandidateMonths(null, buId, year, monthPeriodStatus);
+    }
+
+    @Override
+    public List<AfmCalendarMonthDto> getCandidateMonths(Long bgId, Long buId, String year, String monthPeriodStatus) {
         if (buId == null || year == null || year.trim().isEmpty() || monthPeriodStatus == null) {
             return Collections.emptyList();
         }
@@ -223,36 +287,105 @@ public class AfmPeriodServiceImpl implements AfmPeriodService {
         String targetStatus = monthPeriodStatus.trim().toLowerCase();
         List<AfmCalendarMonth> allMonths = calendarMonthRepository.findByBuIdAndYear(buId, year.trim());
 
-        List<AfmCalendarMonth> matchingMonths = allMonths.stream()
-                .filter(m -> {
-                    String status = m.getPeriodStatus() == null ? "" : m.getPeriodStatus().trim().toLowerCase();
-                    return status.equals(targetStatus);
-                })
-                .toList();
+        List<AfmPeriod> existingPeriods;
+        if (bgId != null) {
+            existingPeriods = periodRepository.findByBgIdAndBuIdOrderByIdDesc(bgId, buId).stream()
+                    .filter(p -> p.getPeriodYear() != null && p.getPeriodYear().trim().equalsIgnoreCase(year.trim()))
+                    .toList();
+        } else {
+            existingPeriods = periodRepository.findByBuIdAndPeriodYearOrderByIdDesc(buId, year.trim());
+        }
 
-        List<AfmPeriod> existingPeriods = periodRepository.findByBuIdAndPeriodYearOrderByIdDesc(buId, year.trim());
-        Set<String> insertedNames = existingPeriods.stream()
-                .map(p -> p.getPeriodName() == null ? "" : p.getPeriodName().trim().toLowerCase())
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toSet());
+        if ("open".equals(targetStatus)) {
+            Map<String, AfmCalendarMonth> monthMap = allMonths.stream()
+                    .filter(m -> m.getPeriodName() != null && !m.getPeriodName().trim().isEmpty())
+                    .collect(Collectors.toMap(
+                            m -> m.getPeriodName().trim().toLowerCase(),
+                            Function.identity(),
+                            (m1, m2) -> m1
+                    ));
 
-        return matchingMonths.stream()
-                .filter(m -> m.getPeriodName() != null && !insertedNames.contains(m.getPeriodName().trim().toLowerCase()))
-                .map(m -> AfmCalendarMonthDto.builder()
-                        .id(m.getId())
-                        .afmCalendarId(m.getAfmCalendarId())
-                        .serialNo(m.getSerialNo())
-                        .calendarYear(m.getCalendarYear())
-                        .calendarMonth(m.getCalendarMonth())
-                        .calendarQuater(m.getCalendarQuater())
-                        .fromDate(m.getFromDate())
-                        .toDate(m.getToDate())
-                        .periodName(m.getPeriodName())
-                        .isAdjustmentPeriod(m.getIsAdjustmentPeriod())
-                        .periodStatus(m.getPeriodStatus())
-                        .status(m.getStatus())
-                        .build())
-                .collect(Collectors.toList());
+            Map<String, AfmPeriod> periodMap = existingPeriods.stream()
+                    .filter(p -> p.getPeriodName() != null && !p.getPeriodName().trim().isEmpty())
+                    .collect(Collectors.toMap(
+                            p -> p.getPeriodName().trim().toLowerCase(),
+                            Function.identity(),
+                            (p1, p2) -> p1
+                    ));
+
+            List<AfmCalendarMonthDto> result = new ArrayList<>();
+            Set<String> added = new HashSet<>();
+
+            for (AfmPeriod p : existingPeriods) {
+                if (Integer.valueOf(1).equals(p.getStatus()) && p.getPeriodStatus() != null && p.getPeriodStatus().trim().equalsIgnoreCase("open")) {
+                    String key = p.getPeriodName().trim().toLowerCase();
+                    if (!added.contains(key)) {
+                        added.add(key);
+                        AfmCalendarMonth m = monthMap.get(key);
+                        result.add(AfmCalendarMonthDto.builder()
+                                .id(p.getAfmCalendarMonthId() != null ? p.getAfmCalendarMonthId() : (m != null ? m.getId() : p.getId()))
+                                .afmCalendarId(m != null ? m.getAfmCalendarId() : null)
+                                .calendarYear(p.getPeriodYear())
+                                .periodName(p.getPeriodName())
+                                .periodStatus("Open")
+                                .status(p.getStatus())
+                                .fromDate(m != null ? m.getFromDate() : null)
+                                .toDate(m != null ? m.getToDate() : null)
+                                .build());
+                    }
+                }
+            }
+
+            for (AfmCalendarMonth m : allMonths) {
+                String key = m.getPeriodName() != null ? m.getPeriodName().trim().toLowerCase() : "";
+                if (!key.isEmpty() && !added.contains(key)) {
+                    AfmPeriod p = periodMap.get(key);
+                    boolean isClosed = p != null && p.getPeriodStatus() != null && p.getPeriodStatus().trim().equalsIgnoreCase("close");
+                    boolean isOpen = m.getPeriodStatus() != null && m.getPeriodStatus().trim().equalsIgnoreCase("open");
+                    boolean isActive = m.getStatus() == null || Integer.valueOf(1).equals(m.getStatus());
+                    if (isOpen && isActive && !isClosed) {
+                        added.add(key);
+                        result.add(toCalendarMonthDto(m));
+                    }
+                }
+            }
+
+            return result;
+        } else {
+            List<AfmCalendarMonth> matchingMonths = allMonths.stream()
+                    .filter(m -> {
+                        String status = m.getPeriodStatus() == null ? "" : m.getPeriodStatus().trim().toLowerCase();
+                        return status.equals(targetStatus);
+                    })
+                    .toList();
+
+            Set<String> insertedNames = existingPeriods.stream()
+                    .map(p -> p.getPeriodName() == null ? "" : p.getPeriodName().trim().toLowerCase())
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toSet());
+
+            return matchingMonths.stream()
+                    .filter(m -> m.getPeriodName() != null && !insertedNames.contains(m.getPeriodName().trim().toLowerCase()))
+                    .map(this::toCalendarMonthDto)
+                    .collect(Collectors.toList());
+        }
+    }
+
+    private AfmCalendarMonthDto toCalendarMonthDto(AfmCalendarMonth m) {
+        return AfmCalendarMonthDto.builder()
+                .id(m.getId())
+                .afmCalendarId(m.getAfmCalendarId())
+                .serialNo(m.getSerialNo())
+                .calendarYear(m.getCalendarYear())
+                .calendarMonth(m.getCalendarMonth())
+                .calendarQuater(m.getCalendarQuater())
+                .fromDate(m.getFromDate())
+                .toDate(m.getToDate())
+                .periodName(m.getPeriodName())
+                .isAdjustmentPeriod(m.getIsAdjustmentPeriod())
+                .periodStatus(m.getPeriodStatus())
+                .status(m.getStatus())
+                .build();
     }
 
     private AfmPeriod findPeriod(Long id) {

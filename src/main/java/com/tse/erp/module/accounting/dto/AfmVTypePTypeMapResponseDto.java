@@ -22,6 +22,7 @@ public class AfmVTypePTypeMapResponseDto {
     private Long paymentTypeId;
     private String paymentTypeValue;
     private String paymentTypeValueCode;
+    private String bankChequeMode;
 
     private Integer status;
 

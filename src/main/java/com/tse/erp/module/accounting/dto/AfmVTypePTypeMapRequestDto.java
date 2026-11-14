@@ -13,5 +13,6 @@ public class AfmVTypePTypeMapRequestDto {
     private Long buId;
     private Long voucherTypeId;
     private Long paymentTypeId;
+    private String bankChequeMode;
     private Integer status;
 }
