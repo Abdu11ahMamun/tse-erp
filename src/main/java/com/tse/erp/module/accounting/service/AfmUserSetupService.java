@@ -19,5 +19,7 @@ public interface AfmUserSetupService {
     void deleteUserSetup(Long id);
 
     List<UserOptionDto> getAvailableUsers(Long bgId, Long buId);
+
+    List<UserOptionDto> getAvailableUsers(Long bgId, Long buId, Long currentUserId);
 }
 

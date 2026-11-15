@@ -3,6 +3,7 @@ package com.tse.erp.module.accounting.dto;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -42,7 +43,10 @@ public class AfmUserSetupResponseDto {
     private String costCenterDefault;
     private String costCenterDefaultName;
 
+    private Integer isAllAccHeadAllowed;
     private Integer status;
+
+    private List<AfmUserAccHeadMapDto> allowedAccounts;
 
     private Long createdUserId;
     private String createdUserName;

@@ -5,6 +5,7 @@ import com.tse.erp.common.StatusUtil;
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.DuplicateResourceException;
 import com.tse.erp.exception.ResourceNotFoundException;
+import com.tse.erp.module.accounting.dto.AfmUserAccHeadMapDto;
 import com.tse.erp.module.accounting.dto.AfmUserSetupRequestDto;
 import com.tse.erp.module.accounting.dto.AfmUserSetupResponseDto;
 import com.tse.erp.module.accounting.dto.UserOptionDto;
@@ -16,6 +17,7 @@ import com.tse.erp.module.accounting.repository.AfmBankRepository;
 import com.tse.erp.module.accounting.repository.AfmLookupValueRepository;
 import com.tse.erp.module.accounting.repository.AfmUserLocationRepository;
 import com.tse.erp.module.accounting.repository.AfmUserSetupRepository;
+import com.tse.erp.module.accounting.service.AfmUserAccHeadMapService;
 import com.tse.erp.module.accounting.service.AfmUserSetupService;
 import com.tse.erp.module.admin.entity.BusinessGroup;
 import com.tse.erp.module.admin.entity.BusinessUnit;
@@ -34,8 +36,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -52,6 +56,7 @@ public class AfmUserSetupServiceImpl implements AfmUserSetupService {
     private final AfmBankDtlsRepository bankDtlsRepository;
     private final AfmBankRepository bankRepository;
     private final DepartmentRepository departmentRepository;
+    private final AfmUserAccHeadMapService userAccHeadMapService;
 
     @Override
     public List<AfmUserSetupResponseDto> getAllUserSetups(Long bgId, Long buId, Long userId, Integer status) {
@@ -97,12 +102,18 @@ public class AfmUserSetupServiceImpl implements AfmUserSetupService {
                 .bankAccountDefault(request.getBankAccountDefault() != null ? request.getBankAccountDefault().trim() : null)
                 .costCenter(request.getCostCenter() != null ? request.getCostCenter().trim() : null)
                 .costCenterDefault(request.getCostCenterDefault() != null ? request.getCostCenterDefault().trim() : null)
+                .isAllAccHeadAllowed(request.getIsAllAccHeadAllowed() != null ? request.getIsAllAccHeadAllowed() : 1)
                 .build();
 
         entity.setStatus(request.getStatus() != null ? request.getStatus() : 1);
         entity.setCreatedApp(AppConstants.APP_NAME);
 
-        return toResponse(userSetupRepository.save(entity));
+        AfmUserSetup saved = userSetupRepository.save(entity);
+        if (request.getAllowedAccounts() != null) {
+            userAccHeadMapService.saveAllForUser(saved.getBgId(), saved.getBuId(), saved.getUserId(), request.getAllowedAccounts());
+        }
+
+        return toResponse(saved);
     }
 
     @Override
@@ -140,12 +151,20 @@ public class AfmUserSetupServiceImpl implements AfmUserSetupService {
         existing.setBankAccountDefault(request.getBankAccountDefault() != null ? request.getBankAccountDefault().trim() : null);
         existing.setCostCenter(request.getCostCenter() != null ? request.getCostCenter().trim() : null);
         existing.setCostCenterDefault(request.getCostCenterDefault() != null ? request.getCostCenterDefault().trim() : null);
+        if (request.getIsAllAccHeadAllowed() != null) {
+            existing.setIsAllAccHeadAllowed(request.getIsAllAccHeadAllowed());
+        }
         if (request.getStatus() != null) {
             existing.setStatus(request.getStatus());
         }
         existing.setUpdatedApp(AppConstants.APP_NAME);
 
-        return toResponse(userSetupRepository.save(existing));
+        AfmUserSetup saved = userSetupRepository.save(existing);
+        if (request.getAllowedAccounts() != null) {
+            userAccHeadMapService.saveAllForUser(saved.getBgId(), saved.getBuId(), saved.getUserId(), request.getAllowedAccounts());
+        }
+
+        return toResponse(saved);
     }
 
     @Override
@@ -157,6 +176,11 @@ public class AfmUserSetupServiceImpl implements AfmUserSetupService {
 
     @Override
     public List<UserOptionDto> getAvailableUsers(Long bgId, Long buId) {
+        return getAvailableUsers(bgId, buId, null);
+    }
+
+    @Override
+    public List<UserOptionDto> getAvailableUsers(Long bgId, Long buId, Long currentUserId) {
         List<User> users;
         if (bgId != null && buId != null) {
             users = userRepository.findByBgIdAndBuIdOrderByIdDesc(bgId, buId);
@@ -166,9 +190,21 @@ public class AfmUserSetupServiceImpl implements AfmUserSetupService {
             users = userRepository.findAllByOrderByIdDesc();
         }
 
+        Set<Long> existingUserIds = new HashSet<>();
+        if (buId != null) {
+            userSetupRepository.findByBuIdOrderByIdDesc(buId).forEach(s -> existingUserIds.add(s.getUserId()));
+        } else {
+            userSetupRepository.findAll().forEach(s -> existingUserIds.add(s.getUserId()));
+        }
+
         List<UserOptionDto> list = new ArrayList<>();
         for (User user : users) {
             if (user.getStatus() != null && user.getStatus() != 1) continue;
+
+            // Exclude user already entered in AFM_USER_SETUP (except currentUserId in edit mode)
+            if (existingUserIds.contains(user.getId()) && (currentUserId == null || !user.getId().equals(currentUserId))) {
+                continue;
+            }
 
             Long empId = null;
             String empCode = null;
@@ -303,6 +339,10 @@ public class AfmUserSetupServiceImpl implements AfmUserSetupService {
                 .map(e -> e.getEmployeeCode() + ": " + e.getEmployeeName()).orElse(null)
                 : null;
 
+        List<AfmUserAccHeadMapDto> allowedAccounts = (entity.getUserId() != null && userAccHeadMapService != null)
+                ? userAccHeadMapService.getByUserId(entity.getUserId(), entity.getBuId())
+                : List.of();
+
         return AfmUserSetupResponseDto.builder()
                 .id(entity.getId())
                 .bgId(entity.getBgId())
@@ -328,7 +368,9 @@ public class AfmUserSetupServiceImpl implements AfmUserSetupService {
                 .costCenter(entity.getCostCenter())
                 .costCenterDefault(entity.getCostCenterDefault())
                 .costCenterDefaultName(costCenterDefaultName)
+                .isAllAccHeadAllowed(entity.getIsAllAccHeadAllowed())
                 .status(entity.getStatus())
+                .allowedAccounts(allowedAccounts)
                 .createdUserId(entity.getCreatedUserId())
                 .createdUserName(createdUserName)
                 .createdEmpId(entity.getCreatedEmpId())

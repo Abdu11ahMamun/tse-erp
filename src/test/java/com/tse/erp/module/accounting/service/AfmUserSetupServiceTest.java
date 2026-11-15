@@ -65,6 +65,8 @@ class AfmUserSetupServiceTest {
     private AfmBankDtlsRepository bankDtlsRepository;
     @Mock
     private DepartmentRepository departmentRepository;
+    @Mock
+    private AfmUserAccHeadMapService userAccHeadMapService;
 
     @InjectMocks
     private AfmUserSetupServiceImpl userSetupService;
@@ -115,6 +117,7 @@ class AfmUserSetupServiceTest {
                 .bankAccountDefault("101")
                 .costCenter("50,51")
                 .costCenterDefault("50")
+                .isAllAccHeadAllowed(1)
                 .build();
         savedEntity.setStatus(1);
 
@@ -135,6 +138,7 @@ class AfmUserSetupServiceTest {
                 .bankAccountDefault("101")
                 .costCenter("50,51")
                 .costCenterDefault("50")
+                .isAllAccHeadAllowed(1)
                 .status(1)
                 .build();
 
@@ -144,6 +148,7 @@ class AfmUserSetupServiceTest {
         assertThat(response.getId()).isEqualTo(1L);
         assertThat(response.getUserName()).isEqualTo("karim01");
         assertThat(response.getUserDisplayLabel()).contains("karim01 : EMP001 : Karim Khan");
+        assertThat(response.getIsAllAccHeadAllowed()).isEqualTo(1);
         verify(userSetupRepository).save(any(AfmUserSetup.class));
     }
 
@@ -167,6 +172,7 @@ class AfmUserSetupServiceTest {
 
     @Test
     void getAvailableUsers_returnsCorrectUserOptionDtos() {
+        when(userSetupRepository.findByBuIdOrderByIdDesc(10L)).thenReturn(List.of());
         when(userRepository.findByBgIdAndBuIdOrderByIdDesc(1L, 10L)).thenReturn(List.of(testUser));
         when(userEmplMapRepository.findByUserIdOrderByIdAsc(5L)).thenReturn(List.of(map));
         when(employeeRepository.findById(20L)).thenReturn(Optional.of(employee));
@@ -179,6 +185,22 @@ class AfmUserSetupServiceTest {
         assertThat(users.get(0).getEmployeeCode()).isEqualTo("EMP001");
         assertThat(users.get(0).getEmployeeName()).isEqualTo("Karim Khan");
         assertThat(users.get(0).getDisplayLabel()).isEqualTo("karim01 : EMP001 : Karim Khan");
+    }
+
+    @Test
+    void getAvailableUsers_excludesAlreadyEnteredUsers() {
+        AfmUserSetup existingSetup = AfmUserSetup.builder().id(100L).buId(10L).userId(5L).build();
+        when(userSetupRepository.findByBuIdOrderByIdDesc(10L)).thenReturn(List.of(existingSetup));
+        when(userRepository.findByBgIdAndBuIdOrderByIdDesc(1L, 10L)).thenReturn(List.of(testUser));
+
+        List<UserOptionDto> users = userSetupService.getAvailableUsers(1L, 10L);
+        assertThat(users).isEmpty();
+
+        // In edit mode with currentUserId = 5L, user should be allowed
+        when(userEmplMapRepository.findByUserIdOrderByIdAsc(5L)).thenReturn(List.of(map));
+        when(employeeRepository.findById(20L)).thenReturn(Optional.of(employee));
+        List<UserOptionDto> editUsers = userSetupService.getAvailableUsers(1L, 10L, 5L);
+        assertThat(editUsers).hasSize(1);
     }
 
     @Test

@@ -57,8 +57,9 @@ public class AfmUserSetupController {
     @GetMapping("/available-users")
     public ResponseEntity<List<UserOptionDto>> getAvailableUsers(
             @RequestParam(required = false) Long bgId,
-            @RequestParam(required = false) Long buId) {
-        return ResponseEntity.ok(userSetupService.getAvailableUsers(bgId, buId));
+            @RequestParam(required = false) Long buId,
+            @RequestParam(required = false) Long currentUserId) {
+        return ResponseEntity.ok(userSetupService.getAvailableUsers(bgId, buId, currentUserId));
     }
 }
 
