@@ -153,6 +153,10 @@ public class EmployeeServiceImpl implements EmployeeService {
                 "Employee name allows only letters, space, dot, hyphen and apostrophe");
         String photo = ValidationUtil.optionalText(
                 source.getPhoto(), "Photo", 255);
+        if (photo != null && !isAllowedPhotoUrl(photo)) {
+            throw new BadRequestException(
+                    "Photo must be the URL returned by the photo upload");
+        }
 
         // Department (required)
         if (source.getDeptId() == null) {
@@ -790,5 +794,14 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee existing = getEmployeeById(id);
         existing.setStatus(status);
         return employeeRepository.save(existing);
+    }
+
+    // Photos are stored as a URL: our own upload path (/uploads/employee-photos/...)
+    // or an absolute http(s) URL (for a future cloud bucket). Never image data.
+    private static boolean isAllowedPhotoUrl(String photo) {
+        if (photo.startsWith("/uploads/employee-photos/")) {
+            return !photo.contains("..");
+        }
+        return photo.startsWith("https://") || photo.startsWith("http://");
     }
 }
