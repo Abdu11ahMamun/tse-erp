@@ -2,6 +2,8 @@ package com.tse.erp.module.accounting.dto;
 
 import lombok.*;
 
+import java.util.List;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -23,6 +25,9 @@ public class AfmUserSetupRequestDto {
     private String costCenter;
     private String costCenterDefault;
 
+    private Integer isAllAccHeadAllowed;
     private Integer status;
+
+    private List<AfmUserAccHeadMapDto> allowedAccounts;
 }
 

@@ -53,6 +53,10 @@ class AfmVoucherServiceTest {
     private AfmSupplierInfoRepository supplierInfoRepository;
     @Mock
     private AfmCustomerInfoRepository customerInfoRepository;
+    @Mock
+    private AfmUserSetupRepository userSetupRepository;
+    @Mock
+    private AfmUserAccHeadMapRepository userAccHeadMapRepository;
 
     @InjectMocks
     private AfmVoucherServiceImpl voucherService;

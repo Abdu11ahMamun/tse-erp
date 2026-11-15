@@ -53,5 +53,8 @@ public class AfmUserSetup extends BaseEntity {
 
     @Column(name = "COST_CENTER_DEFAULT", length = 100)
     private String costCenterDefault;
+
+    @Column(name = "IS_ALL_ACC_HEAD_ALLOWED", columnDefinition = "TINYINT")
+    private Integer isAllAccHeadAllowed;
 }
 

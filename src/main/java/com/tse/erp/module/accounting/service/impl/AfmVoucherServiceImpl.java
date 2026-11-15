@@ -9,6 +9,7 @@ import com.tse.erp.module.accounting.dto.*;
 import com.tse.erp.module.accounting.entity.AfmChartOfAccounts;
 import com.tse.erp.module.accounting.entity.AfmCostCenter;
 import com.tse.erp.module.accounting.entity.AfmLookupValue;
+import com.tse.erp.module.accounting.entity.AfmUserAccHeadMap;
 import com.tse.erp.module.accounting.entity.AfmVoucher;
 import com.tse.erp.module.accounting.entity.AfmVoucherAttach;
 import com.tse.erp.module.accounting.entity.AfmVoucherDetail;
@@ -19,10 +20,13 @@ import com.tse.erp.module.accounting.repository.AfmCostCenterRepository;
 import com.tse.erp.module.accounting.repository.AfmCustomerInfoRepository;
 import com.tse.erp.module.accounting.repository.AfmLookupValueRepository;
 import com.tse.erp.module.accounting.repository.AfmSupplierInfoRepository;
+import com.tse.erp.module.accounting.repository.AfmUserAccHeadMapRepository;
+import com.tse.erp.module.accounting.repository.AfmUserSetupRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherAttachRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherDetailRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherRepository;
 import com.tse.erp.module.accounting.service.AfmVoucherService;
+import com.tse.erp.security.CurrentUser;
 import com.tse.erp.module.admin.entity.BusinessGroup;
 import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
@@ -52,6 +56,8 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
     private final EmployeeRepository employeeRepository;
     private final AfmSupplierInfoRepository supplierInfoRepository;
     private final AfmCustomerInfoRepository customerInfoRepository;
+    private final AfmUserSetupRepository userSetupRepository;
+    private final AfmUserAccHeadMapRepository userAccHeadMapRepository;
 
     @Override
     public List<AfmVoucherResponseDto> getAllVouchers(Long bgId, Long buId, String voucherType, Integer status, LocalDate fromDate, LocalDate toDate) {
@@ -168,6 +174,7 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
 
         // Save Details
         if (request.getVoucherDetails() != null && !request.getVoucherDetails().isEmpty()) {
+            validateUserAllowedAccounts(savedVoucher.getBuId(), request.getVoucherDetails());
             List<AfmVoucherDetail> details = new ArrayList<>();
             for (AfmVoucherDetailDto dto : request.getVoucherDetails()) {
                 AfmVoucherDetail detail = toDetailEntity(dto, savedVoucher.getId(), savedVoucher.getBgId(), savedVoucher.getBuId());
@@ -264,6 +271,7 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
         AfmVoucher savedVoucher = voucherRepository.save(existing);
 
         // Synchronize Detail Rows in-place
+        validateUserAllowedAccounts(savedVoucher.getBuId(), request.getVoucherDetails());
         syncDetails(savedVoucher, request.getVoucherDetails());
 
         // Synchronize Attachments in-place
@@ -374,6 +382,32 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
     // =========================================
     // HELPER & SYNCHRONIZATION METHODS
     // =========================================
+
+    private void validateUserAllowedAccounts(Long buId, List<AfmVoucherDetailDto> details) {
+        if (buId == null || details == null || details.isEmpty()) return;
+        CurrentUser.get().ifPresent(u -> {
+            Long userId = u.userId();
+            if (userId != null) {
+                userSetupRepository.findByBuIdAndUserId(buId, userId).ifPresent(setup -> {
+                    if (Integer.valueOf(0).equals(setup.getIsAllAccHeadAllowed())) {
+                        List<Long> allowedCoaIds = userAccHeadMapRepository
+                                .findByBuIdAndUserIdAndStatusOrderByIdAsc(buId, userId, 1)
+                                .stream()
+                                .map(AfmUserAccHeadMap::getAccountHeadId)
+                                .toList();
+                        for (AfmVoucherDetailDto d : details) {
+                            if (d.getCoaId() != null && !allowedCoaIds.contains(d.getCoaId())) {
+                                String coaName = chartOfAccountsRepository.findById(d.getCoaId())
+                                        .map(c -> c.getAccountCode() + " - " + c.getAccountHeadName())
+                                        .orElse(String.valueOf(d.getCoaId()));
+                                throw new BadRequestException("Account head '" + coaName + "' is not allowed for this user.");
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    }
 
     private void syncDetails(AfmVoucher voucher, List<AfmVoucherDetailDto> incoming) {
         List<AfmVoucherDetail> current = voucherDetailRepository.findByVoucherIdOrderByIdAsc(voucher.getId());
