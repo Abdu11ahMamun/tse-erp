@@ -193,6 +193,9 @@ public class AuthService {
                 username, user.getId(), roleName,
                 empId, user.getBgId(), user.getBuId());
 
+        // New refresh token generate koro (rotation)
+        String newRefreshToken = jwtUtil.generateRefreshToken(username);
+
         return TokenResponse.builder()
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
