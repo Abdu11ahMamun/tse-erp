@@ -35,3 +35,10 @@ Thumbs.db
 *.class
 .target
 target/classes/*target/
+
+# Local configuration with real secrets (database, JWT, mail, captcha). Use application.properties.example as the template.
+src/main/resources/application.properties
+src/main/resources/application-local.properties
+
+# Uploaded files (default location is outside the project; ignore if UPLOAD_DIR points inside it)
+uploads/

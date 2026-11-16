@@ -1,3 +1,6 @@
+# Copy this file to application.properties (which is git-ignored) and fill in the CHANGE_ME values.
+# NEVER commit real passwords or secrets.
+
 # ===================================
 # APP NAME
 # ===================================
@@ -11,8 +14,8 @@ server.port=8080
 # DATABASE CONFIG
 # ===================================
 spring.datasource.url=jdbc:mysql://localhost:3306/tse_erp?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-spring.datasource.username=root
-spring.datasource.password=2360mamun
+spring.datasource.username=CHANGE_ME
+spring.datasource.password=CHANGE_ME
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
 # ===================================
@@ -35,7 +38,7 @@ spring.jpa.open-in-view=false
 # ===================================
 # JWT CONFIG
 # ===================================
-jwt.secret=tse-erp-super-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm
+jwt.secret=CHANGE_ME
 jwt.access-token-expiry=3600000
 jwt.refresh-token-expiry=604800000
 
@@ -61,8 +64,8 @@ security.self-register.default-user-type-id=1
 # ===================================
 spring.mail.host=smtp.gmail.com
 spring.mail.port=587
-spring.mail.username=unsaidscripts@gmail.com
-spring.mail.password=kbkrmuezcskpabgp
+spring.mail.username=CHANGE_ME
+spring.mail.password=CHANGE_ME
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 
@@ -78,6 +81,18 @@ app.mail.from=unsaidscripts@gmail.com
 # captcha CONFIG (now it will be always true)
 # ===================================
 captcha.enabled=true
-captcha.secret=${CAPTCHA_SECRET:1x0000000000000000000000000000000AA}  
+captcha.secret=CHANGE_ME
 captcha.verify-url=https://challenges.cloudflare.com/turnstile/v0/siteverify
 captcha.login-after-failures=3
+
+# ===================================
+# FILE UPLOAD / STORAGE (local disk)
+# ===================================
+# Uploaded images are saved in this folder; the database stores only their
+# /uploads/... URL. It must be a PERSISTENT absolute path outside the project's
+# build folder (target/), so images survive restarts and redeploys.
+# Local default: <your home>/tse-erp-uploads. On the server set the UPLOAD_DIR
+# environment variable (e.g. /var/lib/tse-erp/uploads) and back that folder up.
+app.upload.dir=${UPLOAD_DIR:${user.home}/tse-erp-uploads}
+spring.servlet.multipart.max-file-size=3MB
+spring.servlet.multipart.max-request-size=4MB
