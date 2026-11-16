@@ -25,6 +25,7 @@ import com.tse.erp.module.accounting.repository.AfmUserSetupRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherAttachRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherDetailRepository;
 import com.tse.erp.module.accounting.repository.AfmVoucherRepository;
+import com.tse.erp.module.accounting.service.AfmLedgerService;
 import com.tse.erp.module.accounting.service.AfmVoucherService;
 import com.tse.erp.security.CurrentUser;
 import com.tse.erp.module.admin.entity.BusinessGroup;
@@ -58,6 +59,7 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
     private final AfmCustomerInfoRepository customerInfoRepository;
     private final AfmUserSetupRepository userSetupRepository;
     private final AfmUserAccHeadMapRepository userAccHeadMapRepository;
+    private final AfmLedgerService ledgerService;
 
     @Override
     public List<AfmVoucherResponseDto> getAllVouchers(Long bgId, Long buId, String voucherType, Integer status, LocalDate fromDate, LocalDate toDate) {
@@ -195,6 +197,13 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
             voucherAttachRepository.saveAll(attaches);
         }
 
+        // Synchronize to AfmLedger, AfmLedgerDetail, AfmLedgerAttach
+        if (ledgerService != null) {
+            List<AfmVoucherDetail> savedDetails = voucherDetailRepository.findByVoucherIdOrderByIdAsc(savedVoucher.getId());
+            List<AfmVoucherAttach> savedAttaches = voucherAttachRepository.findByVoucherIdOrderByIdAsc(savedVoucher.getId());
+            ledgerService.syncFromVoucherCreate(savedVoucher, savedDetails, savedAttaches);
+        }
+
         return toResponse(savedVoucher);
     }
 
@@ -277,6 +286,13 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
         // Synchronize Attachments in-place
         syncAttachments(savedVoucher, request.getVoucherAttachments());
 
+        // Synchronize to AfmLedger, AfmLedgerDetail, AfmLedgerAttach
+        if (ledgerService != null) {
+            List<AfmVoucherDetail> currentDetails = voucherDetailRepository.findByVoucherIdOrderByIdAsc(savedVoucher.getId());
+            List<AfmVoucherAttach> currentAttaches = voucherAttachRepository.findByVoucherIdOrderByIdAsc(savedVoucher.getId());
+            ledgerService.syncFromVoucherUpdate(savedVoucher, currentDetails, currentAttaches);
+        }
+
         return toResponse(savedVoucher);
     }
 
@@ -284,6 +300,9 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
     @Transactional
     public void deleteVoucher(Long id) {
         AfmVoucher existing = findVoucher(id);
+        if (ledgerService != null) {
+            ledgerService.syncFromVoucherDelete(id, existing.getBuId(), existing.getVoucherNo());
+        }
         List<AfmVoucherDetail> details = voucherDetailRepository.findByVoucherIdOrderByIdAsc(id);
         if (!details.isEmpty()) {
             voucherDetailRepository.deleteAll(details);
@@ -303,6 +322,11 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
         AfmVoucherDetail entity = toDetailEntity(detailDto, voucherId, voucher.getBgId(), voucher.getBuId());
         entity.setCreatedApp(AppConstants.APP_NAME);
         AfmVoucherDetail saved = voucherDetailRepository.save(entity);
+        if (ledgerService != null) {
+            List<AfmVoucherDetail> curD = voucherDetailRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            List<AfmVoucherAttach> curA = voucherAttachRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            ledgerService.syncFromVoucherUpdate(voucher, curD, curA);
+        }
         return toDetailDto(saved);
     }
 
@@ -324,7 +348,14 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
         existing.setCrAmount(detailDto.getCrAmount() != null ? detailDto.getCrAmount() : BigDecimal.ZERO);
         if (detailDto.getStatus() != null) existing.setStatus(detailDto.getStatus());
         existing.setUpdatedApp(AppConstants.APP_NAME);
-        return toDetailDto(voucherDetailRepository.save(existing));
+        AfmVoucherDetail saved = voucherDetailRepository.save(existing);
+        if (ledgerService != null) {
+            AfmVoucher voucher = findVoucher(voucherId);
+            List<AfmVoucherDetail> curD = voucherDetailRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            List<AfmVoucherAttach> curA = voucherAttachRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            ledgerService.syncFromVoucherUpdate(voucher, curD, curA);
+        }
+        return toDetailDto(saved);
     }
 
     @Override
@@ -337,6 +368,12 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
             throw new BadRequestException("Detail row with id " + detailId + " does not belong to Voucher " + voucherId);
         }
         voucherDetailRepository.delete(existing);
+        if (ledgerService != null) {
+            AfmVoucher voucher = findVoucher(voucherId);
+            List<AfmVoucherDetail> curD = voucherDetailRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            List<AfmVoucherAttach> curA = voucherAttachRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            ledgerService.syncFromVoucherUpdate(voucher, curD, curA);
+        }
     }
 
     // Attachment Sub-resource CRUD
@@ -347,6 +384,11 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
         AfmVoucherAttach entity = toAttachEntity(attachDto, voucherId, voucher.getBgId(), voucher.getBuId());
         entity.setCreatedApp(AppConstants.APP_NAME);
         AfmVoucherAttach saved = voucherAttachRepository.save(entity);
+        if (ledgerService != null) {
+            List<AfmVoucherDetail> curD = voucherDetailRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            List<AfmVoucherAttach> curA = voucherAttachRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            ledgerService.syncFromVoucherUpdate(voucher, curD, curA);
+        }
         return toAttachDto(saved);
     }
 
@@ -364,7 +406,14 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
         if (attachDto.getIsActive() != null) existing.setIsActive(attachDto.getIsActive());
         if (attachDto.getStatus() != null) existing.setStatus(attachDto.getStatus());
         existing.setUpdatedApp(AppConstants.APP_NAME);
-        return toAttachDto(voucherAttachRepository.save(existing));
+        AfmVoucherAttach saved = voucherAttachRepository.save(existing);
+        if (ledgerService != null) {
+            AfmVoucher voucher = findVoucher(voucherId);
+            List<AfmVoucherDetail> curD = voucherDetailRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            List<AfmVoucherAttach> curA = voucherAttachRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            ledgerService.syncFromVoucherUpdate(voucher, curD, curA);
+        }
+        return toAttachDto(saved);
     }
 
     @Override
@@ -377,6 +426,12 @@ public class AfmVoucherServiceImpl implements AfmVoucherService {
             throw new BadRequestException("Attachment with id " + attachId + " does not belong to Voucher " + voucherId);
         }
         voucherAttachRepository.delete(existing);
+        if (ledgerService != null) {
+            AfmVoucher voucher = findVoucher(voucherId);
+            List<AfmVoucherDetail> curD = voucherDetailRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            List<AfmVoucherAttach> curA = voucherAttachRepository.findByVoucherIdOrderByIdAsc(voucherId);
+            ledgerService.syncFromVoucherUpdate(voucher, curD, curA);
+        }
     }
 
     // =========================================
