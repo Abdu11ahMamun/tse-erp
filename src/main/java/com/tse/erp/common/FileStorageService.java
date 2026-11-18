@@ -30,7 +30,7 @@ public class FileStorageService {
 
     private final Path root;
 
-    public FileStorageService(@Value("${app.upload.dir}") String uploadDir) {
+    public FileStorageService(@Value("${app.upload.dir:${user.home}/tse-erp-uploads}") String uploadDir) {
         this.root = Paths.get(uploadDir).toAbsolutePath().normalize();
     }
 
