@@ -1,19 +1,25 @@
 package com.tse.erp.module.common.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.math.BigDecimal;
 
 @Getter
 @Setter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class LookupValueRowDto {
 
     private Long id;
+    private Long bgId;
+    private Long buId;
+    private Long typeId;
+    private String typeCode;
     private String value;
     private String valueCode;
+    private String note;
     private BigDecimal sortOrder;
     private Integer status;
+    private Boolean inUse;
 }
