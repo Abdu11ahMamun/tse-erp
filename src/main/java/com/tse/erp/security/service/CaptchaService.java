@@ -27,7 +27,7 @@ public class CaptchaService {
     private boolean enabled;
     @Value("${captcha.secret:}")
     private String secret;
-    @Value("${captcha.verify-url}")
+    @Value("${captcha.verify-url:https://challenges.cloudflare.com/turnstile/v0/siteverify}")
     private String verifyUrl;
 
     public boolean isEnabled() {

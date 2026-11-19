@@ -308,13 +308,7 @@ public class AfmDatabaseConstraintInitializer implements ApplicationRunner {
                 "id",
                 "FK_INV_ITEM_UOM"
         );
-        ensureForeignKeyConstraint(
-                "INV_ITEM",
-                "STORE_ID",
-                "INV_ITEM_STORE",
-                "ID",
-                "FK_INV_ITEM_STORE"
-        );
+        ensureItemStoreColumnIsVarchar();
         ensureForeignKeyConstraint(
                 "INV_ITEM_ATTRIBUTE_DTLS",
                 "BG_ID",
@@ -461,6 +455,31 @@ public class AfmDatabaseConstraintInitializer implements ApplicationRunner {
             log.info("Ensured INV_ITEM_WAREHOUSE.STORE_ID is VARCHAR(500)");
         } catch (Exception ex) {
             log.warn("Could not alter INV_ITEM_WAREHOUSE.STORE_ID to VARCHAR(500): {}", ex.getMessage());
+        }
+    }
+
+    private void ensureItemStoreColumnIsVarchar() {
+        try {
+            Integer existingCount = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS " +
+                    "WHERE TABLE_SCHEMA = DATABASE() " +
+                    "  AND TABLE_NAME = 'INV_ITEM' " +
+                    "  AND CONSTRAINT_NAME = 'FK_INV_ITEM_STORE'",
+                    Integer.class
+            );
+            if (existingCount != null && existingCount > 0) {
+                jdbcTemplate.execute("ALTER TABLE INV_ITEM DROP FOREIGN KEY FK_INV_ITEM_STORE");
+                log.info("Dropped FK constraint FK_INV_ITEM_STORE on INV_ITEM.STORE_ID");
+            }
+        } catch (Exception ex) {
+            log.warn("Could not check/drop FK constraint FK_INV_ITEM_STORE: {}", ex.getMessage());
+        }
+
+        try {
+            jdbcTemplate.execute("ALTER TABLE INV_ITEM MODIFY COLUMN STORE_ID VARCHAR(500) NULL");
+            log.info("Ensured INV_ITEM.STORE_ID is VARCHAR(500)");
+        } catch (Exception ex) {
+            log.warn("Could not alter INV_ITEM.STORE_ID to VARCHAR(500): {}", ex.getMessage());
         }
     }
 
