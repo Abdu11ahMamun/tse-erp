@@ -23,9 +23,9 @@ public class LookupType extends BaseEntity {
     @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "type_name", nullable = false, length = 50)
+    @Column(name = "type_name", nullable = false, length = 150)
     private String typeName;
 
-    @Column(name = "type_code", length = 10)
+    @Column(name = "type_code", length = 50)
     private String typeCode;
 }

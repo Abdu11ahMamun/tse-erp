@@ -28,4 +28,6 @@ public interface LookupValueRepository
     List<LookupValue> findByTypeIdOrderByIdAsc(Long typeId);
 
     boolean existsByTypeId(Long typeId);
+
+    void deleteByTypeId(Long typeId);
 }
