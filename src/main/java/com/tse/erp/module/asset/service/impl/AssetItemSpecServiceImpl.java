@@ -169,8 +169,24 @@ public class AssetItemSpecServiceImpl
 
         String value = specName.trim();
         List<LookupType> types = lookupTypeRepository
-                .findByBuIdAndTypeNameIgnoreCase(
-                        buId, "Specification");
+                .findByBuIdAndTypeCodeIgnoreCase(buId, "AS001");
+        if (types.isEmpty()) {
+            types = lookupTypeRepository
+                    .findByBuIdAndTypeNameIgnoreCase(
+                            buId, "Specification");
+        }
+        if (types.isEmpty()) {
+            types = lookupTypeRepository
+                    .findByBuIdAndTypeNameIgnoreCase(
+                            buId, "Asset Specification");
+        }
+        if (types.isEmpty()) {
+            types = lookupTypeRepository.findAll().stream()
+                    .filter(t -> "AS001".equalsIgnoreCase(t.getTypeCode())
+                            || "Specification".equalsIgnoreCase(t.getTypeName())
+                            || "Asset Specification".equalsIgnoreCase(t.getTypeName()))
+                    .toList();
+        }
         if (types.isEmpty()) {
             throw new BadRequestException(
                     "Lookup Type 'Specification' is not configured for this Business Unit");
@@ -178,6 +194,12 @@ public class AssetItemSpecServiceImpl
 
         List<LookupValue> values = lookupValueRepository
                 .findByTypeIdAndValueIgnoreCase(types.get(0).getId(), value);
+        if (values.isEmpty()) {
+            for (LookupType t : types) {
+                values = lookupValueRepository.findByTypeIdAndValueIgnoreCase(t.getId(), value);
+                if (!values.isEmpty()) break;
+            }
+        }
         if (values.isEmpty()) {
             throw new ResourceNotFoundException(
                     "Specification not found: " + value);

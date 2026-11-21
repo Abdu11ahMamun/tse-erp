@@ -223,6 +223,14 @@ public class CustodianServiceImpl implements CustodianService {
                 .custodianName(custodian.getCustodianName())
                 .status(custodian.getStatus())
                 .subCustodians(subCustodians)
+                .createdUserId(custodian.getCreatedUserId())
+                .createdEmpId(custodian.getCreatedEmpId())
+                .createdDatetime(custodian.getCreatedDatetime())
+                .createdApp(custodian.getCreatedApp())
+                .updatedUserId(custodian.getUpdatedUserId())
+                .updatedEmpId(custodian.getUpdatedEmpId())
+                .updatedDatetime(custodian.getUpdatedDatetime())
+                .updatedApp(custodian.getUpdatedApp())
                 .build();
     }
 

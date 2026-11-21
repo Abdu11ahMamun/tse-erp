@@ -10,6 +10,7 @@ import com.tse.erp.security.PasswordResetOtpRepository;
 import com.tse.erp.security.model.PasswordResetOtp;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -40,7 +41,7 @@ public class PasswordResetService {
     private final EmployeeRepository employeeRepository;
     private final PasswordResetOtpRepository otpRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JavaMailSender mailSender;
+    private final ObjectProvider<JavaMailSender> mailSenderProvider;
 
     @Value("${otp.expiry-minutes:5}")
     private int otpExpiryMinutes;
@@ -271,6 +272,11 @@ public class PasswordResetService {
 
     @Async
     protected void sendEmail(String to, String subject, String text) {
+        JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
+        if (mailSender == null) {
+            log.warn("JavaMailSender is not configured. Email to {} was skipped.", to);
+            return;
+        }
         try {
             SimpleMailMessage m = new SimpleMailMessage();
             m.setFrom(mailFrom);
