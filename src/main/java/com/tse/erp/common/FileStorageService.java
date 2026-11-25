@@ -2,6 +2,7 @@ package com.tse.erp.common;
 
 import com.tse.erp.exception.BadRequestException;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,6 +22,7 @@ import java.util.UUID;
  * path outside the build folder (target/), so files survive restarts/redeploys.
  * To move to cloud storage later, only this class needs to change.
  */
+@Slf4j
 @Service
 public class FileStorageService {
 
@@ -39,8 +41,19 @@ public class FileStorageService {
         try {
             Files.createDirectories(root.resolve(EMPLOYEE_PHOTO_DIR));
         } catch (IOException e) {
+            log.error("Cannot create upload directory {}", root, e);
             throw new IllegalStateException(
                     "Cannot create upload directory: " + root, e);
+        }
+        // Printed once at startup so the real location is visible in the server log.
+        Path photos = root.resolve(EMPLOYEE_PHOTO_DIR);
+        if (Files.isWritable(photos)) {
+            log.info("Upload directory: {} (exists, writable)", root);
+        } else {
+            log.error("Upload directory {} is NOT writable by user '{}': "
+                            + "photo uploads will fail. Fix the folder "
+                            + "permissions or set UPLOAD_DIR.",
+                    root, System.getProperty("user.name"));
         }
     }
 
@@ -78,6 +91,7 @@ public class FileStorageService {
         try {
             file.transferTo(target);
         } catch (IOException e) {
+            log.error("Could not save uploaded photo to {}", target, e);
             throw new IllegalStateException(
                     "Could not save the uploaded photo", e);
         }
