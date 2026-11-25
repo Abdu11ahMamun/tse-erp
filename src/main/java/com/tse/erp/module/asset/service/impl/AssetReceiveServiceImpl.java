@@ -26,12 +26,12 @@ import com.tse.erp.module.asset.repository.CustodianDtlRepository;
 import com.tse.erp.module.asset.repository.CustodianRepository;
 import com.tse.erp.module.asset.repository.DepriCategoryRepository;
 import com.tse.erp.module.asset.service.AssetReceiveService;
-import com.tse.erp.module.common.validation.CommonLookupValidator;
+import com.tse.erp.module.asset.validation.AssetLookupValidator;
 import com.tse.erp.module.hr.entity.Department;
 import com.tse.erp.module.hr.repository.DepartmentGroupRepository;
 import com.tse.erp.module.hr.repository.DepartmentRepository;
-import com.tse.erp.module.inventory.entity.Supplier;
-import com.tse.erp.module.inventory.repository.SupplierRepository;
+import com.tse.erp.module.accounting.entity.AfmSupplierInfo;
+import com.tse.erp.module.accounting.repository.AfmSupplierInfoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,13 +53,13 @@ public class AssetReceiveServiceImpl implements AssetReceiveService {
     private final AssetItemRepository assetItemRepository;
     private final DepriCategoryRepository depriCategoryRepository;
     private final AssetUomRepository assetUomRepository;
-    private final SupplierRepository supplierRepository;
+    private final AfmSupplierInfoRepository supplierRepository;
     private final CustodianRepository custodianRepository;
     private final CustodianDtlRepository custodianDtlRepository;
     private final AssetLocationRepository assetLocationRepository;
     private final DepartmentRepository departmentRepository;
     private final DepartmentGroupRepository departmentGroupRepository;
-    private final CommonLookupValidator commonLookupValidator;
+    private final AssetLookupValidator commonLookupValidator;
     private final AssetReceiveRepository assetReceiveRepository;
     private final AssetReceiveSpecRepository assetReceiveSpecRepository;
     private final BusinessGroupRepository businessGroupRepository;
@@ -201,7 +201,7 @@ public class AssetReceiveServiceImpl implements AssetReceiveService {
         String purchaseThrough = ValidationUtil.optionalText(
                 d.getPurchaseThrough(), "Purchase through", 50);
 
-        Supplier supplier = requireSupplier(d.getSupplierId(), d.getBuId());
+        AfmSupplierInfo supplier = requireSupplier(d.getSupplierId(), d.getBuId());
         if (d.getReceivedById() == null) {
             throw new BadRequestException("Received by cannot be empty");
         }
@@ -470,11 +470,11 @@ public class AssetReceiveServiceImpl implements AssetReceiveService {
         }
     }
 
-    private Supplier requireSupplier(Long id, Long buId) {
+    private AfmSupplierInfo requireSupplier(Long id, Long buId) {
         if (id == null) {
             throw new BadRequestException("Supplier cannot be empty");
         }
-        Supplier supplier = supplierRepository.findById(id)
+        AfmSupplierInfo supplier = supplierRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Supplier not found with id: " + id));
         requireActive(supplier.getStatus(), "Selected Supplier is not active");

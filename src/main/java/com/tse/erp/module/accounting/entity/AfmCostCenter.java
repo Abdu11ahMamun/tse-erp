@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "AFM_COST_CENTER")
+@Table(name = "afm_cost_center")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,25 +15,25 @@ public class AfmCostCenter extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "PROJECT_ID")
+    @Column(name = "project_id")
     private Long projectId;
 
-    @Column(name = "DEPARTMENT_ID")
+    @Column(name = "department_id")
     private Long departmentId;
 
-    @Column(name = "COST_CENTER", nullable = false, length = 150)
+    @Column(name = "cost_center", nullable = false, length = 150)
     private String costCenter;
 
-    @Column(name = "SHORT_NAME", length = 50)
+    @Column(name = "short_name", length = 50)
     private String shortName;
 }
 

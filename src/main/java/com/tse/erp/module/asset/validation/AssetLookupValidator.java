@@ -1,11 +1,11 @@
-package com.tse.erp.module.common.validation;
+package com.tse.erp.module.asset.validation;
 
 import com.tse.erp.exception.BadRequestException;
 import com.tse.erp.exception.ResourceNotFoundException;
-import com.tse.erp.module.common.entity.LookupType;
-import com.tse.erp.module.common.entity.LookupValue;
-import com.tse.erp.module.common.repository.LookupTypeRepository;
-import com.tse.erp.module.common.repository.LookupValueRepository;
+import com.tse.erp.module.asset.entity.AssetLookupType;
+import com.tse.erp.module.asset.entity.AssetLookupValue;
+import com.tse.erp.module.asset.repository.AssetLookupTypeRepository;
+import com.tse.erp.module.asset.repository.AssetLookupValueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,10 +13,10 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
-public class CommonLookupValidator {
+public class AssetLookupValidator {
 
-    private final LookupValueRepository lookupValueRepository;
-    private final LookupTypeRepository lookupTypeRepository;
+    private final AssetLookupValueRepository lookupValueRepository;
+    private final AssetLookupTypeRepository lookupTypeRepository;
 
     public void validate(
             Long valueId, Long buId, String typeName, String label) {
@@ -24,7 +24,7 @@ public class CommonLookupValidator {
             throw new BadRequestException(label + " cannot be empty");
         }
 
-        LookupValue value = lookupValueRepository.findById(valueId)
+        AssetLookupValue value = lookupValueRepository.findById(valueId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         label + " not found with id: " + valueId));
 
@@ -38,7 +38,7 @@ public class CommonLookupValidator {
         }
 
         if (typeName != null) {
-            LookupType type = findType(buId, typeName);
+            AssetLookupType type = findType(buId, typeName);
             if (!type.getId().equals(value.getTypeId())) {
                 throw new BadRequestException(
                         label + " is not a valid " + typeName + " value");
@@ -47,8 +47,8 @@ public class CommonLookupValidator {
     }
 
     public Long findDefault(Long buId, String typeName, String valueName) {
-        LookupType type = findType(buId, typeName);
-        List<LookupValue> values = lookupValueRepository
+        AssetLookupType type = findType(buId, typeName);
+        List<AssetLookupValue> values = lookupValueRepository
                 .findByTypeIdAndValueIgnoreCase(type.getId(), valueName);
 
         if (values.isEmpty()) {
@@ -59,8 +59,8 @@ public class CommonLookupValidator {
         return values.get(0).getId();
     }
 
-    private LookupType findType(Long buId, String typeName) {
-        List<LookupType> types = lookupTypeRepository
+    private AssetLookupType findType(Long buId, String typeName) {
+        List<AssetLookupType> types = lookupTypeRepository
                 .findByBuIdAndTypeNameIgnoreCase(buId, typeName);
         if (types.isEmpty()) {
             throw new BadRequestException(

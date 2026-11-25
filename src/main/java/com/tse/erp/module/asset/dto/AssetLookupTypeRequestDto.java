@@ -1,4 +1,4 @@
-package com.tse.erp.module.common.dto;
+package com.tse.erp.module.asset.dto;
 
 import lombok.*;
 
@@ -9,7 +9,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LookupTypeRequestDto {
+public class AssetLookupTypeRequestDto {
 
     private Long id;
     private Long bgId;
@@ -18,5 +18,5 @@ public class LookupTypeRequestDto {
     private String typeCode;
     private Integer status;
 
-    private List<LookupValueRowDto> lookupValues;
+    private List<AssetLookupValueRowDto> lookupValues;
 }

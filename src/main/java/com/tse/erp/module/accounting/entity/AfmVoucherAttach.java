@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "AFM_VOUCHER_ATTACH")
+@Table(name = "afm_voucher_attach")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,25 +15,25 @@ public class AfmVoucherAttach extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID")
+    @Column(name = "bg_id")
     private Long bgId;
 
-    @Column(name = "BU_ID")
+    @Column(name = "bu_id")
     private Long buId;
 
-    @Column(name = "VOUCHER_ID", nullable = false)
+    @Column(name = "voucher_id", nullable = false)
     private Long voucherId;
 
-    @Column(name = "ATTACHMENT_FILE_NAME", length = 250)
+    @Column(name = "attachment_file_name", length = 250)
     private String attachmentFileName;
 
     @Lob
-    @Column(name = "ATTACHMENT_FILE", columnDefinition = "LONGTEXT")
+    @Column(name = "attachment_file", columnDefinition = "LONGTEXT")
     private String attachmentFile;
 
-    @Column(name = "IS_ACTIVE")
+    @Column(name = "is_active")
     private Integer isActive;
 }

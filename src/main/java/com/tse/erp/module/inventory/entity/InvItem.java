@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "INV_ITEM")
+@Table(name = "inv_item")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,43 +15,42 @@ public class InvItem extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "ITEM_NAME", nullable = false, length = 150)
+    @Column(name = "item_name", nullable = false, length = 150)
     private String itemName;
 
-    @Column(name = "ITEM_CODE", nullable = false, length = 50)
+    @Column(name = "item_code", nullable = false, length = 50)
     private String itemCode;
 
-    @Column(name = "CATEGORY_ID")
+    @Column(name = "category_id")
     private Long categoryId;
 
-    @Column(name = "BRAND_ID")
+    @Column(name = "brand_id")
     private Long brandId;
 
-    @Column(name = "UOM_ID")
+    @Column(name = "uom_id")
     private Long uomId;
 
-    @Column(name = "STORE_ID", length = 500)
+    @Column(name = "store_id", length = 500)
     private String storeId;
 
-    @Column(name = "ITEM_IMAGE", columnDefinition = "LONGTEXT")
+    @Column(name = "item_image", columnDefinition = "LONGTEXT")
     private String itemImage;
 
-    @Column(name = "IS_WARRANTY_APPLICABLE", columnDefinition = "TINYINT DEFAULT 0")
+    @Column(name = "is_warranty_applicable", columnDefinition = "TINYINT DEFAULT 0")
     private Integer isWarrantyApplicable;
 
-    @Column(name = "WARRANTY_DAY")
+    @Column(name = "warranty_day")
     private Integer warrantyDay;
 
-    @Column(name = "WARRANTY_CRITERIA", length = 1000)
+    @Column(name = "warranty_criteria", length = 1000)
     private String warrantyCriteria;
 }
-

@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "AFM_V_TYPE_P_TYPE_MAP")
+@Table(name = "afm_v_type_p_type_map")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,41 +15,41 @@ public class AfmVTypePTypeMap extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "VOUCHER_TYPE_ID", nullable = false)
+    @Column(name = "voucher_type_id", nullable = false)
     private Long voucherTypeId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
-            name = "VOUCHER_TYPE_ID",
-            referencedColumnName = "ID",
+            name = "voucher_type_id",
+            referencedColumnName = "id",
             insertable = false,
             updatable = false,
             foreignKey = @ForeignKey(name = "FK_AFM_VT_PT_MAP_VOUCHER_TYPE")
     )
     private AfmLookupValue voucherType;
 
-    @Column(name = "PAYMENT_TYPE_ID", nullable = false)
+    @Column(name = "payment_type_id", nullable = false)
     private Long paymentTypeId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
-            name = "PAYMENT_TYPE_ID",
-            referencedColumnName = "ID",
+            name = "payment_type_id",
+            referencedColumnName = "id",
             insertable = false,
             updatable = false,
             foreignKey = @ForeignKey(name = "FK_AFM_VT_PT_MAP_PAYMENT_TYPE")
     )
     private AfmLookupValue paymentType;
 
-    @Column(name = "BANK_CHEQUE_MODE", length = 20)
+    @Column(name = "bank_cheque_mode", length = 20)
     private String bankChequeMode;
 }

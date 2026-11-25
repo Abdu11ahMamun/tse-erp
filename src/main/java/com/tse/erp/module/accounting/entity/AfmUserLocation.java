@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "AFM_USER_LOCATION")
+@Table(name = "afm_user_location")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,19 +15,19 @@ public class AfmUserLocation extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "LOCATION", nullable = false, length = 150)
+    @Column(name = "location", nullable = false, length = 150)
     private String location;
 
-    @Column(name = "SHORT_NAME", length = 50)
+    @Column(name = "short_name", length = 50)
     private String shortName;
 }
 

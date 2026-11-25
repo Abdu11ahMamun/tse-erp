@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "AFM_LOOKUP_TYPE")
+@Table(name = "afm_lookup_type")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,18 +15,18 @@ public class AfmLookupType extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "TYPE_NAME", nullable = false, length = 150)
+    @Column(name = "type_name", nullable = false, length = 150)
     private String typeName;
 
-    @Column(name = "TYPE_CODE", length = 50)
+    @Column(name = "type_code", length = 50)
     private String typeCode;
 }

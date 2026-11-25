@@ -1,4 +1,4 @@
-package com.tse.erp.module.common.dto;
+package com.tse.erp.module.asset.dto;
 
 import lombok.*;
 
@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LookupValueRowDto {
+public class AssetLookupValueRowDto {
 
     private Long id;
     private Long bgId;

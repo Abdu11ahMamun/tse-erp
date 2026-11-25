@@ -7,7 +7,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "INV_ITEM_ATTRIBUTE_DTLS")
+@Table(name = "inv_item_attribute_dtls")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,25 +17,24 @@ public class InvItemAttributeDtls extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "ITEM_ID", nullable = false)
+    @Column(name = "item_id", nullable = false)
     private Long itemId;
 
-    @Column(name = "ATTRIBUTE_ID", nullable = false)
+    @Column(name = "attribute_id", nullable = false)
     private Long attributeId;
 
-    @Column(name = "PRICE", precision = 18, scale = 2)
+    @Column(name = "price", precision = 18, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "OPENING_STOCK", precision = 18, scale = 2)
+    @Column(name = "opening_stock", precision = 18, scale = 2)
     private BigDecimal openingStock;
 }
-

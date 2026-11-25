@@ -30,6 +30,13 @@ public class AssetItemController {
                 assetItemService.getAssetItemById(id));
     }
 
+    @GetMapping("/{id}/item-sets")
+    public ResponseEntity<List<com.tse.erp.module.asset.entity.AssetItemSet>> getItemSetsByItemId(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(
+                assetItemService.getItemSetsByItemId(id));
+    }
+
     @PostMapping
     public ResponseEntity<AssetItem> createAssetItem(
             @RequestBody AssetItem assetItem) {

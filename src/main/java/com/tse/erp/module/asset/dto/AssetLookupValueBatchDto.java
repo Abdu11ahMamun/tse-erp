@@ -1,4 +1,4 @@
-package com.tse.erp.module.common.dto;
+package com.tse.erp.module.asset.dto;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,11 +9,11 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class LookupValueBatchDto {
+public class AssetLookupValueBatchDto {
 
     private Long bgId;
     private Long buId;
     private Long typeId;
     private String typeCode;
-    private List<LookupValueRowDto> values;
+    private List<AssetLookupValueRowDto> values;
 }

@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "INV_ITEM_CATEGORY")
+@Table(name = "inv_item_category")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,19 +15,18 @@ public class InvItemCategory extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "CATEGORY_NAME", nullable = false, length = 150)
+    @Column(name = "category_name", nullable = false, length = 150)
     private String categoryName;
 
-    @Column(name = "CATEGORY_CODE", nullable = false, length = 50)
+    @Column(name = "category_code", nullable = false, length = 50)
     private String categoryCode;
 }
-

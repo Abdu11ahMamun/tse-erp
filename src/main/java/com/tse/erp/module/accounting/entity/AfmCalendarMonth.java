@@ -7,7 +7,7 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "AFM_CALENDAR_MONTH")
+@Table(name = "afm_calendar_month")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,37 +17,37 @@ public class AfmCalendarMonth extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "AFM_CALENDAR_ID", nullable = false)
+    @Column(name = "afm_calendar_id", nullable = false)
     private Long afmCalendarId;
 
-    @Column(name = "SERIAL_NO")
+    @Column(name = "serial_no")
     private Integer serialNo;
 
-    @Column(name = "CALENDAR_YEAR", length = 50)
+    @Column(name = "calendar_year", length = 50)
     private String calendarYear;
 
-    @Column(name = "CALENDAR_MONTH", length = 50)
+    @Column(name = "calendar_month", length = 50)
     private String calendarMonth;
 
-    @Column(name = "CALENDAR_QUATER", length = 50)
+    @Column(name = "calendar_quater", length = 50)
     private String calendarQuater;
 
-    @Column(name = "FROM_DATE")
+    @Column(name = "from_date")
     private LocalDate fromDate;
 
-    @Column(name = "TO_DATE")
+    @Column(name = "to_date")
     private LocalDate toDate;
 
-    @Column(name = "PERIOD_NAME", length = 100)
+    @Column(name = "period_name", length = 100)
     private String periodName;
 
-    @Column(name = "IS_ADJUSTMENT_PERIOD", length = 20)
+    @Column(name = "is_adjustment_period", length = 20)
     private String isAdjustmentPeriod;
 
-    @Column(name = "PERIOD_STATUS", length = 20)
+    @Column(name = "period_status", length = 20)
     private String periodStatus;
 }
 

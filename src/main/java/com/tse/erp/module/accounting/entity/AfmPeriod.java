@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "AFM_PERIOD")
+@Table(name = "afm_period")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,24 +15,24 @@ public class AfmPeriod extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "PERIOD_YEAR", nullable = false, length = 50)
+    @Column(name = "period_year", nullable = false, length = 50)
     private String periodYear;
 
-    @Column(name = "PERIOD_NAME", nullable = false, length = 100)
+    @Column(name = "period_name", nullable = false, length = 100)
     private String periodName;
 
-    @Column(name = "PERIOD_STATUS", nullable = false, length = 20)
+    @Column(name = "period_status", nullable = false, length = 20)
     private String periodStatus;
 
-    @Column(name = "AFM_CALENDAR_MONTH_ID")
+    @Column(name = "afm_calendar_month_id")
     private Long afmCalendarMonthId;
 }

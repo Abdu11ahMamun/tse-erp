@@ -34,4 +34,10 @@ public class AssetItem extends BaseEntity {
 
     @Column(name = "uom_id", nullable = false)
     private Long uomId;
+
+    @Column(name = "item_piece_or_set", length = 20)
+    private String itemPieceOrSet;
+
+    @Transient
+    private java.util.List<AssetItemSet> itemSets;
 }

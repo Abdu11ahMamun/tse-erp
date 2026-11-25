@@ -14,7 +14,7 @@ import com.tse.erp.module.asset.repository.CustodianRepository;
 import com.tse.erp.module.asset.repository.GatePassDtlRepository;
 import com.tse.erp.module.asset.repository.GatePassRepository;
 import com.tse.erp.module.asset.service.GatePassService;
-import com.tse.erp.module.inventory.repository.SupplierRepository;
+import com.tse.erp.module.accounting.repository.AfmSupplierInfoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +29,7 @@ public class GatePassServiceImpl implements GatePassService {
     private final GatePassRepository repository;
     private final GatePassDtlRepository dtlRepository;
     private final BusinessUnitRepository businessUnitRepository;
-    private final SupplierRepository supplierRepository;
+    private final AfmSupplierInfoRepository supplierRepository;
     private final CustodianRepository custodianRepository;
     private final AssetItemRepository assetItemRepository;
 

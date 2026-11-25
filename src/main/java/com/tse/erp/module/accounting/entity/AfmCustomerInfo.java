@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "AFM_CUSTOMER_INFO")
+@Table(name = "afm_customer_info")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,103 +18,103 @@ public class AfmCustomerInfo extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "CUSTOMER_CODE", length = 50, nullable = false)
+    @Column(name = "customer_code", length = 50, nullable = false)
     private String customerCode;
 
-    @Column(name = "CUSTOMER_NAME", length = 150, nullable = false)
+    @Column(name = "customer_name", length = 150, nullable = false)
     private String customerName;
 
-    @Column(name = "CUSTOMER_TYPE", length = 50)
+    @Column(name = "customer_type", length = 50)
     private String customerType;
 
-    @Column(name = "BUSINESS_TYPE", length = 50)
+    @Column(name = "business_type", length = 50)
     private String businessType;
 
-    @Column(name = "CONTACT_PERSON", length = 100)
+    @Column(name = "contact_person", length = 100)
     private String contactPerson;
 
-    @Column(name = "DESIGNATION", length = 100)
+    @Column(name = "designation", length = 100)
     private String designation;
 
-    @Column(name = "PHONE", length = 50)
+    @Column(name = "phone", length = 50)
     private String phone;
 
-    @Column(name = "ALTERNATE_PHONE", length = 50)
+    @Column(name = "alternate_phone", length = 50)
     private String alternatePhone;
 
-    @Column(name = "EMAIL", length = 100)
+    @Column(name = "email", length = 100)
     private String email;
 
-    @Column(name = "WEBSITE", length = 150)
+    @Column(name = "website", length = 150)
     private String website;
 
-    @Column(name = "COUNTRY_ID")
+    @Column(name = "country_id")
     private Long countryId;
 
-    @Column(name = "DIVISION", length = 100)
+    @Column(name = "division", length = 100)
     private String division;
 
-    @Column(name = "DISTRICT", length = 100)
+    @Column(name = "district", length = 100)
     private String district;
 
-    @Column(name = "ADDRESS", length = 500)
+    @Column(name = "address", length = 500)
     private String address;
 
-    @Column(name = "POSTAL_CODE", length = 50)
+    @Column(name = "postal_code", length = 50)
     private String postalCode;
 
-    @Column(name = "SHIPPING_ADDRESS", length = 500)
+    @Column(name = "shipping_address", length = 500)
     private String shippingAddress;
 
-    @Column(name = "TAX_REGISTRATION_NO", length = 100)
+    @Column(name = "tax_registration_no", length = 100)
     private String taxRegistrationNo;
 
-    @Column(name = "TIN_NUMBER", length = 100)
+    @Column(name = "tin_number", length = 100)
     private String tinNumber;
 
-    @Column(name = "PAYMENT_TERMS", length = 50)
+    @Column(name = "payment_terms", length = 50)
     private String paymentTerms;
 
-    @Column(name = "CREDIT_LOWER_LIMIT", precision = 18, scale = 2)
+    @Column(name = "credit_lower_limit", precision = 18, scale = 2)
     private BigDecimal creditLowerLimit;
 
-    @Column(name = "CREDIT_UPPER_LIMIT", precision = 18, scale = 2)
+    @Column(name = "credit_upper_limit", precision = 18, scale = 2)
     private BigDecimal creditUpperLimit;
 
-    @Column(name = "AGREEMENT_DATE_FROM")
+    @Column(name = "agreement_date_from")
     private LocalDate agreementDateFrom;
 
-    @Column(name = "AGREEMENT_DATE_TO")
+    @Column(name = "agreement_date_to")
     private LocalDate agreementDateTo;
 
-    @Column(name = "FINANCE_STATUS", length = 20)
+    @Column(name = "finance_status", length = 20)
     private String financeStatus;
 
-    @Column(name = "CREDIT_DAYS")
+    @Column(name = "credit_days")
     private Integer creditDays;
 
-    @Column(name = "CURRENCY_CODE", length = 20)
+    @Column(name = "currency_code", length = 20)
     private String currencyCode;
 
-    @Column(name = "OPENING_BALANCE", precision = 18, scale = 2)
+    @Column(name = "opening_balance", precision = 18, scale = 2)
     private BigDecimal openingBalance;
 
-    @Column(name = "BALANCE_TYPE", length = 20)
+    @Column(name = "balance_type", length = 20)
     private String balanceType;
 
-    @Column(name = "CUSTOMER_CATEGORY_ID")
+    @Column(name = "customer_category_id")
     private Long customerCategoryId;
 
-    @Column(name = "REMARKS", length = 500)
+    @Column(name = "remarks", length = 500)
     private String remarks;
 }
 

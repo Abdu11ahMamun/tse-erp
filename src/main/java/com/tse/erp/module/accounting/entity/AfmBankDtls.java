@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "AFM_BANK_DTLS")
+@Table(name = "afm_bank_dtls")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,36 +18,36 @@ public class AfmBankDtls extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "AFM_BANK_ID", nullable = false)
+    @Column(name = "afm_bank_id", nullable = false)
     private Long afmBankId;
 
-    @Column(name = "BRANCH_NAME", length = 150)
+    @Column(name = "branch_name", length = 150)
     private String branchName;
 
-    @Column(name = "ADDRESS", length = 500)
+    @Column(name = "address", length = 500)
     private String address;
 
-    @Column(name = "ACCOUNT_TYPE", length = 50)
+    @Column(name = "account_type", length = 50)
     private String accountType;
 
-    @Column(name = "ACCOUNT_NAME", length = 150)
+    @Column(name = "account_name", length = 150)
     private String accountName;
 
-    @Column(name = "ACCOUNT_NUMBER", length = 50)
+    @Column(name = "account_number", length = 50)
     private String accountNumber;
 
-    @Column(name = "OPENING_DATE")
+    @Column(name = "opening_date")
     private LocalDate openingDate;
 
-    @Column(name = "OPENING_BALANCE", precision = 18, scale = 2)
+    @Column(name = "opening_balance", precision = 18, scale = 2)
     private BigDecimal openingBalance;
 }

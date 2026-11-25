@@ -7,7 +7,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "AFM_LEDGER_DETAIL")
+@Table(name = "afm_ledger_detail")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,36 +17,36 @@ public class AfmLedgerDetail extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID")
+    @Column(name = "bg_id")
     private Long bgId;
 
-    @Column(name = "BU_ID")
+    @Column(name = "bu_id")
     private Long buId;
 
-    @Column(name = "VOUCHER_ID", nullable = false)
+    @Column(name = "voucher_id", nullable = false)
     private Long voucherId;
 
-    @Column(name = "COA_ID")
+    @Column(name = "coa_id")
     private Long coaId;
 
-    @Column(name = "COA_SOURCE_TYPE", length = 100)
+    @Column(name = "coa_source_type", length = 100)
     private String coaSourceType;
 
-    @Column(name = "COA_SOURCE_NAME", length = 100)
+    @Column(name = "coa_source_name", length = 100)
     private String coaSourceName;
 
-    @Column(name = "COA_SOURCE_ID")
+    @Column(name = "coa_source_id")
     private Long coaSourceId;
 
-    @Column(name = "COST_CENTER_ID")
+    @Column(name = "cost_center_id")
     private Long costCenterId;
 
-    @Column(name = "DR_AMOUNT", precision = 18, scale = 2)
+    @Column(name = "dr_amount", precision = 18, scale = 2)
     private BigDecimal drAmount;
 
-    @Column(name = "CR_AMOUNT", precision = 18, scale = 2)
+    @Column(name = "cr_amount", precision = 18, scale = 2)
     private BigDecimal crAmount;
 }

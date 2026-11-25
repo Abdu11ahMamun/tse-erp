@@ -15,4 +15,6 @@ public interface AssetItemService {
     AssetItem updateAssetItem(Long id, AssetItem assetItem);
 
     void deleteAssetItem(Long id);
+
+    java.util.List<com.tse.erp.module.asset.entity.AssetItemSet> getItemSetsByItemId(Long itemId);
 }

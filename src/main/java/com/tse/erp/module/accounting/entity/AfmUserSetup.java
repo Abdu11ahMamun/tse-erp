@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "AFM_USER_SETUP")
+@Table(name = "afm_user_setup")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,46 +15,46 @@ public class AfmUserSetup extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "USER_ID", nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "VOUCHER_DATE", length = 250)
+    @Column(name = "voucher_date", length = 250)
     private String voucherDate;
 
-    @Column(name = "VOUCHER_TYPE", length = 500)
+    @Column(name = "voucher_type", length = 500)
     private String voucherType;
 
-    @Column(name = "VOUCHER_TYPE_DEFAULT", length = 100)
+    @Column(name = "voucher_type_default", length = 100)
     private String voucherTypeDefault;
 
-    @Column(name = "LOCATION", length = 500)
+    @Column(name = "location", length = 500)
     private String location;
 
-    @Column(name = "LOCATION_DEFAULT", length = 100)
+    @Column(name = "location_default", length = 100)
     private String locationDefault;
 
-    @Column(name = "BANK_ACCOUNT", length = 500)
+    @Column(name = "bank_account", length = 500)
     private String bankAccount;
 
-    @Column(name = "BANK_ACCOUNT_DEFAULT", length = 100)
+    @Column(name = "bank_account_default", length = 100)
     private String bankAccountDefault;
 
-    @Column(name = "COST_CENTER", length = 500)
+    @Column(name = "cost_center", length = 500)
     private String costCenter;
 
-    @Column(name = "COST_CENTER_DEFAULT", length = 100)
+    @Column(name = "cost_center_default", length = 100)
     private String costCenterDefault;
 
-    @Column(name = "IS_ALL_ACC_HEAD_ALLOWED", columnDefinition = "TINYINT")
+    @Column(name = "is_all_acc_head_allowed", columnDefinition = "TINYINT")
     private Integer isAllAccHeadAllowed;
 }
 

@@ -1,4 +1,4 @@
-package com.tse.erp.module.common.entity;
+package com.tse.erp.module.asset.entity;
 
 import com.tse.erp.common.BaseEntity;
 import jakarta.persistence.*;
@@ -11,7 +11,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LookupType extends BaseEntity {
+public class AssetLookupType extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

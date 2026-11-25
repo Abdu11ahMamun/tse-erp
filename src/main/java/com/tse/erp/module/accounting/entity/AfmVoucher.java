@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "AFM_VOUCHER")
+@Table(name = "afm_voucher")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,81 +18,81 @@ public class AfmVoucher extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "VOUCHER_DATE")
+    @Column(name = "voucher_date")
     private LocalDate voucherDate;
 
-    @Column(name = "VOUCHER_TYPE_ID")
+    @Column(name = "voucher_type_id")
     private Long voucherTypeId;
 
-    @Column(name = "VOUCHER_TYPE", length = 50)
+    @Column(name = "voucher_type", length = 50)
     private String voucherType;
 
-    @Column(name = "VOUCHER_NO", length = 50)
+    @Column(name = "voucher_no", length = 50)
     private String voucherNo;
 
-    @Column(name = "LOCATION_ID")
+    @Column(name = "location_id")
     private Long locationId;
 
-    @Column(name = "PAYMENT_TYPE_ID")
+    @Column(name = "payment_type_id")
     private Long paymentTypeId;
 
-    @Column(name = "PAYMENT_TYPE", length = 50)
+    @Column(name = "payment_type", length = 50)
     private String paymentType;
 
-    @Column(name = "PAYMENT_TO", length = 200)
+    @Column(name = "payment_to", length = 200)
     private String paymentTo;
 
-    @Column(name = "PAYMENT_THROUGH_ID")
+    @Column(name = "payment_through_id")
     private Long paymentThroughId;
 
-    @Column(name = "PAYMENT_THROUGH", length = 50)
+    @Column(name = "payment_through", length = 50)
     private String paymentThrough;
 
-    @Column(name = "PERIOD_NAME", length = 50)
+    @Column(name = "period_name", length = 50)
     private String periodName;
 
-    @Column(name = "VOUCHER_AMOUNT", precision = 18, scale = 2)
+    @Column(name = "voucher_amount", precision = 18, scale = 2)
     private BigDecimal voucherAmount;
 
-    @Column(name = "VOUCHER_SOURCE", length = 50)
+    @Column(name = "voucher_source", length = 50)
     private String voucherSource;
 
-    @Column(name = "VOUCHER_SOURCE_LINK", length = 250)
+    @Column(name = "voucher_source_link", length = 250)
     private String voucherSourceLink;
 
-    @Column(name = "VOUCHER_STATUS", length = 50)
+    @Column(name = "voucher_status", length = 50)
     private String voucherStatus;
 
-    @Column(name = "APPROVAL_CODE", length = 50)
+    @Column(name = "approval_code", length = 50)
     private String approvalCode;
 
-    @Column(name = "BANK_ACCOUNT", length = 100)
+    @Column(name = "bank_account", length = 100)
     private String bankAccount;
 
-    @Column(name = "CHEQUE_NO", length = 50)
+    @Column(name = "cheque_no", length = 50)
     private String chequeNo;
 
-    @Column(name = "CHEQUE_DATE")
+    @Column(name = "cheque_date")
     private LocalDate chequeDate;
 
-    @Column(name = "CHEQUE_AMOUNT", precision = 18, scale = 2)
+    @Column(name = "cheque_amount", precision = 18, scale = 2)
     private BigDecimal chequeAmount;
 
-    @Column(name = "IS_POSTED")
+    @Column(name = "is_posted")
     private Integer isPosted;
 
-    @Column(name = "IS_RECONCILED")
+    @Column(name = "is_reconciled")
     private Integer isReconciled;
 
-    @Column(name = "NARRATION", length = 1000)
+    @Column(name = "narration", length = 1000)
     private String narration;
 }

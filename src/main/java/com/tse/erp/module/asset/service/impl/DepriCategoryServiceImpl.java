@@ -11,8 +11,8 @@ import com.tse.erp.module.asset.entity.DepriCategory;
 import com.tse.erp.module.asset.repository.AssetItemRepository;
 import com.tse.erp.module.asset.repository.DepriCategoryRepository;
 import com.tse.erp.module.asset.service.DepriCategoryService;
-import com.tse.erp.module.common.entity.LookupValue;
-import com.tse.erp.module.common.repository.LookupValueRepository;
+import com.tse.erp.module.asset.entity.AssetLookupValue;
+import com.tse.erp.module.asset.repository.AssetLookupValueRepository;
 import com.tse.erp.module.hr.entity.Department;
 import com.tse.erp.module.hr.repository.DepartmentGroupRepository;
 import com.tse.erp.module.hr.repository.DepartmentRepository;
@@ -30,7 +30,7 @@ public class DepriCategoryServiceImpl implements DepriCategoryService {
     private final AssetItemRepository assetItemRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
-    private final LookupValueRepository lookupValueRepository;
+    private final AssetLookupValueRepository lookupValueRepository;
     private final DepartmentRepository departmentRepository;
     private final DepartmentGroupRepository departmentGroupRepository;
 
@@ -200,7 +200,7 @@ public class DepriCategoryServiceImpl implements DepriCategoryService {
             throw new BadRequestException(label + " cannot be empty");
         }
 
-        LookupValue lookupValue = lookupValueRepository.findById(valueId)
+        AssetLookupValue lookupValue = lookupValueRepository.findById(valueId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         label + " not found with id: " + valueId));
 

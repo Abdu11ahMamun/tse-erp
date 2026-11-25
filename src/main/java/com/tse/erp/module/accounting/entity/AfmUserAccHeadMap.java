@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "AFM_USER_ACC_HEAD_MAP")
+@Table(name = "afm_user_acc_head_map")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,18 +15,18 @@ public class AfmUserAccHeadMap extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "USER_ID", nullable = false)
+    @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "ACCOUNT_HEAD_ID", nullable = false)
+    @Column(name = "account_head_id", nullable = false)
     private Long accountHeadId;
 }

@@ -7,7 +7,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "AFM_LOOKUP_VALUE")
+@Table(name = "afm_lookup_value")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,30 +17,30 @@ public class AfmLookupValue extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "TYPE_NAME_ID", nullable = false)
+    @Column(name = "type_name_id", nullable = false)
     private Long typeNameId;
 
-    @Column(name = "TYPE_CODE", length = 50)
+    @Column(name = "type_code", length = 50)
     private String typeCode;
 
-    @Column(name = "VALUE", nullable = false, length = 150)
+    @Column(name = "value", nullable = false, length = 150)
     private String value;
 
-    @Column(name = "VALUE_CODE", length = 50)
+    @Column(name = "value_code", length = 50)
     private String valueCode;
 
-    @Column(name = "NOTE", length = 200)
+    @Column(name = "note", length = 200)
     private String note;
 
-    @Column(name = "SORT_ORDER", precision = 12, scale = 4)
+    @Column(name = "sort_order", precision = 12, scale = 4)
     private BigDecimal sortOrder;
 }

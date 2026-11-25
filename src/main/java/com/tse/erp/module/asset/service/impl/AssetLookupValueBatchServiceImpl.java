@@ -1,4 +1,4 @@
-package com.tse.erp.module.common.service.impl;
+package com.tse.erp.module.asset.service.impl;
 
 import com.tse.erp.common.StatusUtil;
 import com.tse.erp.exception.BadRequestException;
@@ -7,13 +7,13 @@ import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
-import com.tse.erp.module.common.dto.LookupValueBatchDto;
-import com.tse.erp.module.common.dto.LookupValueRowDto;
-import com.tse.erp.module.common.entity.LookupType;
-import com.tse.erp.module.common.entity.LookupValue;
-import com.tse.erp.module.common.repository.LookupTypeRepository;
-import com.tse.erp.module.common.repository.LookupValueRepository;
-import com.tse.erp.module.common.service.LookupValueBatchService;
+import com.tse.erp.module.asset.dto.AssetLookupValueBatchDto;
+import com.tse.erp.module.asset.dto.AssetLookupValueRowDto;
+import com.tse.erp.module.asset.entity.AssetLookupType;
+import com.tse.erp.module.asset.entity.AssetLookupValue;
+import com.tse.erp.module.asset.repository.AssetLookupTypeRepository;
+import com.tse.erp.module.asset.repository.AssetLookupValueRepository;
+import com.tse.erp.module.asset.service.AssetLookupValueBatchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,21 +30,21 @@ import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
-public class LookupValueBatchServiceImpl
-        implements LookupValueBatchService {
+public class AssetLookupValueBatchServiceImpl
+        implements AssetLookupValueBatchService {
 
-    private final LookupValueRepository lookupValueRepository;
-    private final LookupTypeRepository lookupTypeRepository;
+    private final AssetLookupValueRepository lookupValueRepository;
+    private final AssetLookupTypeRepository lookupTypeRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
 
     @Override
-    public LookupValueBatchDto getByType(Long typeId) {
-        LookupType type = findType(typeId);
-        List<LookupValueRowDto> rows = new ArrayList<>();
-        for (LookupValue value
+    public AssetLookupValueBatchDto getByType(Long typeId) {
+        AssetLookupType type = findType(typeId);
+        List<AssetLookupValueRowDto> rows = new ArrayList<>();
+        for (AssetLookupValue value
                 : lookupValueRepository.findByTypeIdOrderByIdAsc(typeId)) {
-            LookupValueRowDto row = new LookupValueRowDto();
+            AssetLookupValueRowDto row = new AssetLookupValueRowDto();
             row.setId(value.getId());
             row.setValue(value.getValue());
             row.setValueCode(value.getValueCode());
@@ -53,7 +53,7 @@ public class LookupValueBatchServiceImpl
             rows.add(row);
         }
 
-        LookupValueBatchDto result = new LookupValueBatchDto();
+        AssetLookupValueBatchDto result = new AssetLookupValueBatchDto();
         result.setBgId(type.getBgId());
         result.setBuId(type.getBuId());
         result.setTypeId(type.getId());
@@ -64,9 +64,9 @@ public class LookupValueBatchServiceImpl
 
     @Override
     @Transactional
-    public LookupValueBatchDto saveByType(
-            Long typeId, LookupValueBatchDto dto) {
-        LookupType type = findType(typeId);
+    public AssetLookupValueBatchDto saveByType(
+            Long typeId, AssetLookupValueBatchDto dto) {
+        AssetLookupType type = findType(typeId);
         if (!Integer.valueOf(1).equals(type.getStatus())) {
             throw new BadRequestException(
                     "Selected Lookup Type is not active");
@@ -101,25 +101,25 @@ public class LookupValueBatchServiceImpl
             typeCode = type.getTypeCode();
         }
 
-        List<LookupValueRowDto> rows = dto.getValues() == null
+        List<AssetLookupValueRowDto> rows = dto.getValues() == null
                 ? Collections.emptyList()
                 : dto.getValues();
         validateRows(rows);
 
-        List<LookupValue> current =
+        List<AssetLookupValue> current =
                 lookupValueRepository.findByTypeIdOrderByIdAsc(typeId);
-        Map<Long, LookupValue> byId = new HashMap<>();
+        Map<Long, AssetLookupValue> byId = new HashMap<>();
         current.forEach(value -> byId.put(value.getId(), value));
         Set<Long> handled = new HashSet<>();
-        List<LookupValue> newRows = new ArrayList<>();
+        List<AssetLookupValue> newRows = new ArrayList<>();
 
-        for (LookupValueRowDto row : rows) {
+        for (AssetLookupValueRowDto row : rows) {
             if (row.getId() != null) {
-                LookupValue existing = byId.get(row.getId());
+                AssetLookupValue existing = byId.get(row.getId());
                 if (existing == null) {
                     throw new BadRequestException(
                             "Row id " + row.getId()
-                                    + " does not belong to this Lookup Type");
+                                     + " does not belong to this Lookup Type");
                 }
                 existing.setValue(row.getValue());
                 existing.setValueCode(row.getValueCode());
@@ -129,7 +129,7 @@ public class LookupValueBatchServiceImpl
                 }
                 handled.add(row.getId());
             } else {
-                LookupValue newRow = new LookupValue();
+                AssetLookupValue newRow = new AssetLookupValue();
                 newRow.setBgId(dto.getBgId());
                 newRow.setBuId(dto.getBuId());
                 newRow.setTypeId(typeId);
@@ -143,15 +143,15 @@ public class LookupValueBatchServiceImpl
             }
         }
 
-        for (LookupValue value : current) {
+        for (AssetLookupValue value : current) {
             if (!handled.contains(value.getId())) {
                 value.setStatus(0);
             }
         }
 
-        List<LookupValue> allRows = new ArrayList<>(current);
+        List<AssetLookupValue> allRows = new ArrayList<>(current);
         allRows.addAll(newRows);
-        for (LookupValue value : allRows) {
+        for (AssetLookupValue value : allRows) {
             value.setTypeCode(typeCode);
         }
         validateAllRows(allRows);
@@ -160,16 +160,16 @@ public class LookupValueBatchServiceImpl
         return getByType(typeId);
     }
 
-    private LookupType findType(Long typeId) {
+    private AssetLookupType findType(Long typeId) {
         return lookupTypeRepository.findById(typeId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Lookup Type not found with id: " + typeId));
     }
 
-    private void validateRows(List<LookupValueRowDto> rows) {
+    private void validateRows(List<AssetLookupValueRowDto> rows) {
         Set<String> values = new HashSet<>();
         Set<String> valueCodes = new HashSet<>();
-        for (LookupValueRowDto row : rows) {
+        for (AssetLookupValueRowDto row : rows) {
             StatusUtil.validate(row.getStatus());
             String value = cleanValue(row.getValue());
             String valueCode = cleanCode(
@@ -193,10 +193,10 @@ public class LookupValueBatchServiceImpl
         }
     }
 
-    private void validateAllRows(List<LookupValue> rows) {
+    private void validateAllRows(List<AssetLookupValue> rows) {
         Set<String> values = new HashSet<>();
         Set<String> valueCodes = new HashSet<>();
-        for (LookupValue row : rows) {
+        for (AssetLookupValue row : rows) {
             String valueKey = row.getValue().toLowerCase(Locale.ROOT);
             if (!values.add(valueKey)) {
                 throw new DuplicateResourceException(

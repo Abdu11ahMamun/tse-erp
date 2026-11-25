@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "AFM_CUST_FIN_AGREEMENT")
+@Table(name = "afm_cust_fin_agreement")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -18,46 +18,46 @@ public class AfmCustFinAgreement extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "CUSTOMER_ID", nullable = false)
+    @Column(name = "customer_id", nullable = false)
     private Long customerId;
 
-    @Column(name = "PAYMENT_TERMS", length = 50)
+    @Column(name = "payment_terms", length = 50)
     private String paymentTerms;
 
-    @Column(name = "CURRENCY_CODE", length = 20)
+    @Column(name = "currency_code", length = 20)
     private String currencyCode;
 
-    @Column(name = "CREDIT_LOWER_LIMIT", precision = 18, scale = 2)
+    @Column(name = "credit_lower_limit", precision = 18, scale = 2)
     private BigDecimal creditLowerLimit;
 
-    @Column(name = "CREDIT_UPPER_LIMIT", precision = 18, scale = 2)
+    @Column(name = "credit_upper_limit", precision = 18, scale = 2)
     private BigDecimal creditUpperLimit;
 
-    @Column(name = "CREDIT_DAYS")
+    @Column(name = "credit_days")
     private Integer creditDays;
 
-    @Column(name = "OPENING_BALANCE", precision = 18, scale = 2)
+    @Column(name = "opening_balance", precision = 18, scale = 2)
     private BigDecimal openingBalance;
 
-    @Column(name = "BALANCE_TYPE", length = 20)
+    @Column(name = "balance_type", length = 20)
     private String balanceType;
 
-    @Column(name = "AGREEMENT_DATE_FROM")
+    @Column(name = "agreement_date_from")
     private LocalDate agreementDateFrom;
 
-    @Column(name = "AGREEMENT_DATE_TO")
+    @Column(name = "agreement_date_to")
     private LocalDate agreementDateTo;
 
-    @Column(name = "FINANCE_STATUS", length = 20)
+    @Column(name = "finance_status", length = 20)
     private String financeStatus;
 }
 

@@ -7,7 +7,7 @@ import lombok.*;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "AFM_CALENDAR")
+@Table(name = "afm_calendar")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,28 +17,28 @@ public class AfmCalendar extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "CALENDAR_YEAR", nullable = false, length = 50)
+    @Column(name = "calendar_year", nullable = false, length = 50)
     private String calendarYear;
 
-    @Column(name = "CALENDAR_TYPE", nullable = false, length = 50)
+    @Column(name = "calendar_type", nullable = false, length = 50)
     private String calendarType;
 
-    @Column(name = "FROM_DATE", nullable = false)
+    @Column(name = "from_date", nullable = false)
     private LocalDate fromDate;
 
-    @Column(name = "TO_DATE", nullable = false)
+    @Column(name = "to_date", nullable = false)
     private LocalDate toDate;
 
-    @Column(name = "PERIOD", length = 50)
+    @Column(name = "period", length = 50)
     private String period;
 }
 

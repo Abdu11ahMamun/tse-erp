@@ -9,7 +9,7 @@ import com.tse.erp.module.asset.entity.AssetMaintenance;
 import com.tse.erp.module.asset.repository.AssetItemRepository;
 import com.tse.erp.module.asset.repository.AssetMaintenanceRepository;
 import com.tse.erp.module.asset.service.AssetMaintenanceService;
-import com.tse.erp.module.inventory.repository.SupplierRepository;
+import com.tse.erp.module.accounting.repository.AfmSupplierInfoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -37,7 +37,7 @@ public class AssetMaintenanceServiceImpl implements AssetMaintenanceService {
     private final AssetMaintenanceRepository repository;
     private final BusinessUnitRepository businessUnitRepository;
     private final AssetItemRepository assetItemRepository;
-    private final SupplierRepository supplierRepository;
+    private final AfmSupplierInfoRepository supplierRepository;
 
     @Override
     public List<AssetMaintenance> getAll(Long buId, Long itemId) {

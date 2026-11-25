@@ -12,10 +12,10 @@ import com.tse.erp.module.asset.entity.AssetItemSpec;
 import com.tse.erp.module.asset.repository.AssetItemRepository;
 import com.tse.erp.module.asset.repository.AssetItemSpecRepository;
 import com.tse.erp.module.asset.service.AssetItemSpecService;
-import com.tse.erp.module.common.entity.LookupType;
-import com.tse.erp.module.common.entity.LookupValue;
-import com.tse.erp.module.common.repository.LookupTypeRepository;
-import com.tse.erp.module.common.repository.LookupValueRepository;
+import com.tse.erp.module.asset.entity.AssetLookupType;
+import com.tse.erp.module.asset.entity.AssetLookupValue;
+import com.tse.erp.module.asset.repository.AssetLookupTypeRepository;
+import com.tse.erp.module.asset.repository.AssetLookupValueRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -30,8 +30,8 @@ public class AssetItemSpecServiceImpl
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
     private final AssetItemRepository assetItemRepository;
-    private final LookupTypeRepository lookupTypeRepository;
-    private final LookupValueRepository lookupValueRepository;
+    private final AssetLookupTypeRepository lookupTypeRepository;
+    private final AssetLookupValueRepository lookupValueRepository;
 
     @Override
     public List<AssetItemSpec> getAllAssetItemSpecs(
@@ -168,7 +168,7 @@ public class AssetItemSpecServiceImpl
         }
 
         String value = specName.trim();
-        List<LookupType> types = lookupTypeRepository
+        List<AssetLookupType> types = lookupTypeRepository
                 .findByBuIdAndTypeCodeIgnoreCase(buId, "AS001");
         if (types.isEmpty()) {
             types = lookupTypeRepository
@@ -192,10 +192,10 @@ public class AssetItemSpecServiceImpl
                     "Lookup Type 'Specification' is not configured for this Business Unit");
         }
 
-        List<LookupValue> values = lookupValueRepository
+        List<AssetLookupValue> values = lookupValueRepository
                 .findByTypeIdAndValueIgnoreCase(types.get(0).getId(), value);
         if (values.isEmpty()) {
-            for (LookupType t : types) {
+            for (AssetLookupType t : types) {
                 values = lookupValueRepository.findByTypeIdAndValueIgnoreCase(t.getId(), value);
                 if (!values.isEmpty()) break;
             }

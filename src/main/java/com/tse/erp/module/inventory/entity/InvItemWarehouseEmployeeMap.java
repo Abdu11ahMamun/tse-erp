@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "INV_ITEM_WAREHS_EMPL_MAP")
+@Table(name = "inv_item_warehs_empl_map")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,18 +15,18 @@ public class InvItemWarehouseEmployeeMap extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "WAREHOUSE_ID", nullable = false)
+    @Column(name = "warehouse_id", nullable = false)
     private Long warehouseId;
 
-    @Column(name = "EMPLOYEE_ID", nullable = false)
+    @Column(name = "employee_id", nullable = false)
     private Long employeeId;
 }

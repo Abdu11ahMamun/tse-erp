@@ -7,7 +7,7 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "AFM_CHART_OF_ACCOUNTS")
+@Table(name = "afm_chart_of_accounts")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,48 +17,48 @@ public class AfmChartOfAccounts extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "ID")
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "BG_ID", nullable = false)
+    @Column(name = "bg_id", nullable = false)
     private Long bgId;
 
-    @Column(name = "BU_ID", nullable = false)
+    @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "ACCOUNT_CODE", nullable = false, length = 50)
+    @Column(name = "account_code", nullable = false, length = 50)
     private String accountCode;
 
-    @Column(name = "ACCOUNT_HEAD_NAME", nullable = false, length = 150)
+    @Column(name = "account_head_name", nullable = false, length = 150)
     private String accountHeadName;
 
-    @Column(name = "LEDGER_HEAD", nullable = false, length = 50)
+    @Column(name = "ledger_head", nullable = false, length = 50)
     private String ledgerHead;
 
-    @Column(name = "ACCOUNT_HEAD_TYPE", nullable = false, length = 50)
+    @Column(name = "account_head_type", nullable = false, length = 50)
     private String accountHeadType;
 
-    @Column(name = "PARENT_ACCOUNT_HEAD")
+    @Column(name = "parent_account_head")
     private Long parentAccountHead;
 
-    @Column(name = "PARENT_ACCOUNT_CODE", length = 50)
+    @Column(name = "parent_account_code", length = 50)
     private String parentAccountCode;
 
-    @Column(name = "SORT_ORDER", precision = 10, scale = 2)
+    @Column(name = "sort_order", precision = 10, scale = 2)
     private BigDecimal sortOrder;
 
-    @Column(name = "ACCOUNT_USAGE", length = 50)
+    @Column(name = "account_usage", length = 50)
     private String accountUsage;
 
-    @Column(name = "ACCOUNTS_SOURCE", length = 50)
+    @Column(name = "accounts_source", length = 50)
     private String accountsSource;
 
-    @Column(name = "IS_COST_CENTER_MANDATORY")
+    @Column(name = "is_cost_center_mandatory")
     private Integer isCostCenterMandatory;
 
-    @Column(name = "IS_BUDGET_ACC_HEAD")
+    @Column(name = "is_budget_acc_head")
     private Integer isBudgetAccHead;
 
-    @Column(name = "LEVEL")
+    @Column(name = "level")
     private Integer level;
 }

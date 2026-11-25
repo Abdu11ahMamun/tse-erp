@@ -1,4 +1,4 @@
-package com.tse.erp.module.common.entity;
+package com.tse.erp.module.asset.entity;
 
 import com.tse.erp.common.BaseEntity;
 import jakarta.persistence.*;
@@ -7,13 +7,13 @@ import lombok.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "asset_lookup_value")
+@Table(name = "asset_item_set")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class LookupValue extends BaseEntity {
+public class AssetItemSet extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,20 +25,11 @@ public class LookupValue extends BaseEntity {
     @Column(name = "bu_id", nullable = false)
     private Long buId;
 
-    @Column(name = "type_name_id", nullable = false)
-    private Long typeId;
+    @Column(name = "item_id", nullable = false)
+    private Long itemId;
 
-    @Column(name = "value", nullable = false, length = 150)
-    private String value;
-
-    @Column(name = "type_code", length = 50)
-    private String typeCode;
-
-    @Column(name = "value_code", length = 50)
-    private String valueCode;
-
-    @Column(name = "note", length = 200)
-    private String note;
+    @Column(name = "item_name", nullable = false, length = 150)
+    private String itemName;
 
     @Column(name = "sort_order", precision = 12, scale = 4)
     private BigDecimal sortOrder;

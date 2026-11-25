@@ -1,4 +1,4 @@
-package com.tse.erp.module.common.service.impl;
+package com.tse.erp.module.asset.service.impl;
 
 import com.tse.erp.common.AppConstants;
 import com.tse.erp.common.StatusUtil;
@@ -9,14 +9,14 @@ import com.tse.erp.module.admin.entity.BusinessGroup;
 import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
-import com.tse.erp.module.common.dto.LookupTypeRequestDto;
-import com.tse.erp.module.common.dto.LookupTypeResponseDto;
-import com.tse.erp.module.common.dto.LookupValueRowDto;
-import com.tse.erp.module.common.entity.LookupType;
-import com.tse.erp.module.common.entity.LookupValue;
-import com.tse.erp.module.common.repository.LookupTypeRepository;
-import com.tse.erp.module.common.repository.LookupValueRepository;
-import com.tse.erp.module.common.service.LookupTypeService;
+import com.tse.erp.module.asset.dto.AssetLookupTypeRequestDto;
+import com.tse.erp.module.asset.dto.AssetLookupTypeResponseDto;
+import com.tse.erp.module.asset.dto.AssetLookupValueRowDto;
+import com.tse.erp.module.asset.entity.AssetLookupType;
+import com.tse.erp.module.asset.entity.AssetLookupValue;
+import com.tse.erp.module.asset.repository.AssetLookupTypeRepository;
+import com.tse.erp.module.asset.repository.AssetLookupValueRepository;
+import com.tse.erp.module.asset.service.AssetLookupTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,16 +26,16 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-public class LookupTypeServiceImpl implements LookupTypeService {
+public class AssetLookupTypeServiceImpl implements AssetLookupTypeService {
 
-    private final LookupTypeRepository lookupTypeRepository;
-    private final LookupValueRepository lookupValueRepository;
+    private final AssetLookupTypeRepository lookupTypeRepository;
+    private final AssetLookupValueRepository lookupValueRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
 
     @Override
-    public List<LookupTypeResponseDto> getAllLookupTypes(Long buId) {
-        List<LookupType> types = (buId == null)
+    public List<AssetLookupTypeResponseDto> getAllLookupTypes(Long buId) {
+        List<AssetLookupType> types = (buId == null)
                 ? lookupTypeRepository.findAllByOrderByIdDesc()
                 : lookupTypeRepository.findByBuIdOrderByIdDesc(buId);
 
@@ -43,20 +43,20 @@ public class LookupTypeServiceImpl implements LookupTypeService {
     }
 
     @Override
-    public LookupTypeResponseDto getLookupTypeById(Long id) {
+    public AssetLookupTypeResponseDto getLookupTypeById(Long id) {
         return toResponse(findLookupTypeEntity(id));
     }
 
     @Override
-    public List<LookupValueRowDto> getLookupValues(Long typeId) {
+    public List<AssetLookupValueRowDto> getLookupValues(Long typeId) {
         findLookupTypeEntity(typeId);
-        List<LookupValue> values = lookupValueRepository.findByTypeIdOrderBySortOrderAscIdAsc(typeId);
+        List<AssetLookupValue> values = lookupValueRepository.findByTypeIdOrderBySortOrderAscIdAsc(typeId);
         return values.stream().map(this::toValueDto).toList();
     }
 
     @Override
     @Transactional
-    public LookupTypeResponseDto createLookupType(LookupTypeRequestDto request) {
+    public AssetLookupTypeResponseDto createLookupType(AssetLookupTypeRequestDto request) {
         validateParents(request.getBgId(), request.getBuId());
         validateTypeName(request.getTypeName());
         validateTypeCode(request.getTypeCode());
@@ -75,8 +75,8 @@ public class LookupTypeServiceImpl implements LookupTypeService {
 
         if (code != null) {
             boolean codeExists = !lookupTypeRepository
-                    .findByBuIdAndTypeCodeIgnoreCase(request.getBuId(), code)
-                    .isEmpty();
+                .findByBuIdAndTypeCodeIgnoreCase(request.getBuId(), code)
+                .isEmpty();
             if (codeExists) {
                 throw new DuplicateResourceException("Lookup Type code already exists: " + code);
             }
@@ -84,7 +84,7 @@ public class LookupTypeServiceImpl implements LookupTypeService {
 
         validateDetailRows(request.getLookupValues(), null);
 
-        LookupType lookupType = LookupType.builder()
+        AssetLookupType lookupType = AssetLookupType.builder()
                 .bgId(request.getBgId())
                 .buId(request.getBuId())
                 .typeName(name)
@@ -94,13 +94,13 @@ public class LookupTypeServiceImpl implements LookupTypeService {
         lookupType.setStatus(request.getStatus() != null ? request.getStatus() : 1);
         lookupType.setCreatedApp(AppConstants.APP_NAME);
 
-        LookupType savedType = lookupTypeRepository.save(lookupType);
+        AssetLookupType savedType = lookupTypeRepository.save(lookupType);
 
         if (request.getLookupValues() != null && !request.getLookupValues().isEmpty()) {
-            List<LookupValue> values = new ArrayList<>();
+            List<AssetLookupValue> values = new ArrayList<>();
             for (int i = 0; i < request.getLookupValues().size(); i++) {
-                LookupValueRowDto dto = request.getLookupValues().get(i);
-                LookupValue entity = toValueEntity(dto, savedType.getId(), savedType.getBgId(), savedType.getBuId(), savedType.getTypeCode(), i + 1);
+                AssetLookupValueRowDto dto = request.getLookupValues().get(i);
+                AssetLookupValue entity = toValueEntity(dto, savedType.getId(), savedType.getBgId(), savedType.getBuId(), savedType.getTypeCode(), i + 1);
                 entity.setCreatedApp(AppConstants.APP_NAME);
                 values.add(entity);
             }
@@ -112,8 +112,8 @@ public class LookupTypeServiceImpl implements LookupTypeService {
 
     @Override
     @Transactional
-    public LookupTypeResponseDto updateLookupType(Long id, LookupTypeRequestDto request) {
-        LookupType existing = findLookupTypeEntity(id);
+    public AssetLookupTypeResponseDto updateLookupType(Long id, AssetLookupTypeRequestDto request) {
+        AssetLookupType existing = findLookupTypeEntity(id);
 
         validateParents(request.getBgId(), request.getBuId());
         validateTypeName(request.getTypeName());
@@ -153,26 +153,26 @@ public class LookupTypeServiceImpl implements LookupTypeService {
         }
         existing.setUpdatedApp(AppConstants.APP_NAME);
 
-        LookupType savedType = lookupTypeRepository.save(existing);
+        AssetLookupType savedType = lookupTypeRepository.save(existing);
 
         // Synchronize Lookup Values: update existing, insert new, delete removed
-        List<LookupValue> currentDbValues = lookupValueRepository.findByTypeIdOrderBySortOrderAscIdAsc(id);
-        Map<Long, LookupValue> dbValueMap = new HashMap<>();
-        for (LookupValue v : currentDbValues) {
+        List<AssetLookupValue> currentDbValues = lookupValueRepository.findByTypeIdOrderBySortOrderAscIdAsc(id);
+        Map<Long, AssetLookupValue> dbValueMap = new HashMap<>();
+        for (AssetLookupValue v : currentDbValues) {
             if (v.getId() != null) {
                 dbValueMap.put(v.getId(), v);
             }
         }
 
         Set<Long> incomingIds = new HashSet<>();
-        List<LookupValue> toSave = new ArrayList<>();
+        List<AssetLookupValue> toSave = new ArrayList<>();
 
         if (request.getLookupValues() != null) {
             for (int i = 0; i < request.getLookupValues().size(); i++) {
-                LookupValueRowDto dto = request.getLookupValues().get(i);
+                AssetLookupValueRowDto dto = request.getLookupValues().get(i);
                 if (dto.getId() != null && dbValueMap.containsKey(dto.getId())) {
                     incomingIds.add(dto.getId());
-                    LookupValue existingVal = dbValueMap.get(dto.getId());
+                    AssetLookupValue existingVal = dbValueMap.get(dto.getId());
                     existingVal.setBgId(savedType.getBgId());
                     existingVal.setBuId(savedType.getBuId());
                     existingVal.setTypeCode(savedType.getTypeCode());
@@ -190,7 +190,7 @@ public class LookupTypeServiceImpl implements LookupTypeService {
                     existingVal.setUpdatedApp(AppConstants.APP_NAME);
                     toSave.add(existingVal);
                 } else {
-                    LookupValue newVal = toValueEntity(dto, savedType.getId(), savedType.getBgId(), savedType.getBuId(), savedType.getTypeCode(), i + 1);
+                    AssetLookupValue newVal = toValueEntity(dto, savedType.getId(), savedType.getBgId(), savedType.getBuId(), savedType.getTypeCode(), i + 1);
                     newVal.setId(null);
                     newVal.setCreatedApp(AppConstants.APP_NAME);
                     toSave.add(newVal);
@@ -198,8 +198,8 @@ public class LookupTypeServiceImpl implements LookupTypeService {
             }
         }
 
-        List<LookupValue> toDelete = new ArrayList<>();
-        for (LookupValue v : currentDbValues) {
+        List<AssetLookupValue> toDelete = new ArrayList<>();
+        for (AssetLookupValue v : currentDbValues) {
             if (!incomingIds.contains(v.getId())) {
                 toDelete.add(v);
             }
@@ -220,7 +220,7 @@ public class LookupTypeServiceImpl implements LookupTypeService {
     @Transactional
     public void deleteLookupType(Long id) {
         findLookupTypeEntity(id);
-        List<LookupValue> values = lookupValueRepository.findByTypeIdOrderBySortOrderAscIdAsc(id);
+        List<AssetLookupValue> values = lookupValueRepository.findByTypeIdOrderBySortOrderAscIdAsc(id);
         if (!values.isEmpty()) {
             lookupValueRepository.deleteAll(values);
         }
@@ -229,41 +229,41 @@ public class LookupTypeServiceImpl implements LookupTypeService {
 
     // Backward compatible overloads
     @Override
-    public LookupType createLookupType(LookupType lookupType) {
-        LookupTypeRequestDto dto = LookupTypeRequestDto.builder()
+    public AssetLookupType createLookupType(AssetLookupType lookupType) {
+        AssetLookupTypeRequestDto dto = AssetLookupTypeRequestDto.builder()
                 .bgId(lookupType.getBgId())
                 .buId(lookupType.getBuId())
                 .typeName(lookupType.getTypeName())
                 .typeCode(lookupType.getTypeCode())
                 .status(lookupType.getStatus())
                 .build();
-        LookupTypeResponseDto resp = createLookupType(dto);
+        AssetLookupTypeResponseDto resp = createLookupType(dto);
         lookupType.setId(resp.getId());
         return lookupType;
     }
 
     @Override
-    public LookupType updateLookupType(Long id, LookupType lookupType) {
-        LookupTypeRequestDto dto = LookupTypeRequestDto.builder()
+    public AssetLookupType updateLookupType(Long id, AssetLookupType lookupType) {
+        AssetLookupTypeRequestDto dto = AssetLookupTypeRequestDto.builder()
                 .bgId(lookupType.getBgId())
                 .buId(lookupType.getBuId())
                 .typeName(lookupType.getTypeName())
                 .typeCode(lookupType.getTypeCode())
                 .status(lookupType.getStatus())
                 .build();
-        LookupTypeResponseDto resp = updateLookupType(id, dto);
+        AssetLookupTypeResponseDto resp = updateLookupType(id, dto);
         lookupType.setId(resp.getId());
         return lookupType;
     }
 
-    private LookupType findLookupTypeEntity(Long id) {
+    private AssetLookupType findLookupTypeEntity(Long id) {
         return lookupTypeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Lookup Type not found with id: " + id));
     }
 
-    private LookupTypeResponseDto toResponse(LookupType type) {
-        List<LookupValue> values = lookupValueRepository.findByTypeIdOrderBySortOrderAscIdAsc(type.getId());
-        List<LookupValueRowDto> detailDtos = values.stream().map(this::toValueDto).toList();
+    private AssetLookupTypeResponseDto toResponse(AssetLookupType type) {
+        List<AssetLookupValue> values = lookupValueRepository.findByTypeIdOrderBySortOrderAscIdAsc(type.getId());
+        List<AssetLookupValueRowDto> detailDtos = values.stream().map(this::toValueDto).toList();
 
         String groupName = null;
         if (type.getBgId() != null) {
@@ -279,7 +279,7 @@ public class LookupTypeServiceImpl implements LookupTypeService {
                     .orElse(null);
         }
 
-        return LookupTypeResponseDto.builder()
+        return AssetLookupTypeResponseDto.builder()
                 .id(type.getId())
                 .bgId(type.getBgId())
                 .buId(type.getBuId())
@@ -300,8 +300,8 @@ public class LookupTypeServiceImpl implements LookupTypeService {
                 .build();
     }
 
-    private LookupValueRowDto toValueDto(LookupValue val) {
-        return LookupValueRowDto.builder()
+    private AssetLookupValueRowDto toValueDto(AssetLookupValue val) {
+        return AssetLookupValueRowDto.builder()
                 .id(val.getId())
                 .bgId(val.getBgId())
                 .buId(val.getBuId())
@@ -316,7 +316,7 @@ public class LookupTypeServiceImpl implements LookupTypeService {
                 .build();
     }
 
-    private LookupValue toValueEntity(LookupValueRowDto dto, Long typeId, Long bgId, Long buId, String typeCode, int defaultOrder) {
+    private AssetLookupValue toValueEntity(AssetLookupValueRowDto dto, Long typeId, Long bgId, Long buId, String typeCode, int defaultOrder) {
         String val = dto.getValue() != null ? dto.getValue().trim() : null;
         String valCode = dto.getValueCode() != null && !dto.getValueCode().trim().isEmpty()
                 ? dto.getValueCode().trim().toUpperCase(Locale.ROOT)
@@ -329,7 +329,7 @@ public class LookupTypeServiceImpl implements LookupTypeService {
                 ? dto.getSortOrder()
                 : BigDecimal.valueOf(defaultOrder);
 
-        LookupValue entity = LookupValue.builder()
+        AssetLookupValue entity = AssetLookupValue.builder()
                 .id(dto.getId())
                 .bgId(bgId)
                 .buId(buId)
@@ -345,7 +345,7 @@ public class LookupTypeServiceImpl implements LookupTypeService {
         return entity;
     }
 
-    private void validateDetailRows(List<LookupValueRowDto> rows, Long existingTypeId) {
+    private void validateDetailRows(List<AssetLookupValueRowDto> rows, Long existingTypeId) {
         if (rows == null || rows.isEmpty()) {
             return;
         }
@@ -354,7 +354,7 @@ public class LookupTypeServiceImpl implements LookupTypeService {
         Set<String> seenCodes = new HashSet<>();
 
         for (int i = 0; i < rows.size(); i++) {
-            LookupValueRowDto row = rows.get(i);
+            AssetLookupValueRowDto row = rows.get(i);
             int rowNum = i + 1;
 
             if (row.getValue() == null || row.getValue().trim().isEmpty()) {

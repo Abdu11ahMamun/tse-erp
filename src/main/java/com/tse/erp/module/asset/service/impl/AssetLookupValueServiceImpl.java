@@ -1,4 +1,4 @@
-package com.tse.erp.module.common.service.impl;
+package com.tse.erp.module.asset.service.impl;
 
 import com.tse.erp.common.StatusUtil;
 import com.tse.erp.exception.BadRequestException;
@@ -7,11 +7,11 @@ import com.tse.erp.exception.ResourceNotFoundException;
 import com.tse.erp.module.admin.entity.BusinessUnit;
 import com.tse.erp.module.admin.repository.BusinessGroupRepository;
 import com.tse.erp.module.admin.repository.BusinessUnitRepository;
-import com.tse.erp.module.common.entity.LookupType;
-import com.tse.erp.module.common.entity.LookupValue;
-import com.tse.erp.module.common.repository.LookupTypeRepository;
-import com.tse.erp.module.common.repository.LookupValueRepository;
-import com.tse.erp.module.common.service.LookupValueService;
+import com.tse.erp.module.asset.entity.AssetLookupType;
+import com.tse.erp.module.asset.entity.AssetLookupValue;
+import com.tse.erp.module.asset.repository.AssetLookupTypeRepository;
+import com.tse.erp.module.asset.repository.AssetLookupValueRepository;
+import com.tse.erp.module.asset.service.AssetLookupValueService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
@@ -19,16 +19,16 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class LookupValueServiceImpl
-        implements LookupValueService {
+public class AssetLookupValueServiceImpl
+        implements AssetLookupValueService {
 
-    private final LookupValueRepository lookupValueRepository;
-    private final LookupTypeRepository lookupTypeRepository;
+    private final AssetLookupValueRepository lookupValueRepository;
+    private final AssetLookupTypeRepository lookupTypeRepository;
     private final BusinessGroupRepository businessGroupRepository;
     private final BusinessUnitRepository businessUnitRepository;
 
     @Override
-    public List<LookupValue> getAllLookupValues(
+    public List<AssetLookupValue> getAllLookupValues(
             Long buId, Long typeId) {
         if (buId != null && typeId != null) {
             return lookupValueRepository
@@ -47,16 +47,16 @@ public class LookupValueServiceImpl
     }
 
     @Override
-    public LookupValue getLookupValueById(Long id) {
+    public AssetLookupValue getLookupValueById(Long id) {
         return lookupValueRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Lookup Value not found with id: " + id));
     }
 
     @Override
-    public LookupValue createLookupValue(LookupValue lookupValue) {
+    public AssetLookupValue createLookupValue(AssetLookupValue lookupValue) {
 
-        LookupType type = validateParents(lookupValue);
+        AssetLookupType type = validateParents(lookupValue);
         validateValue(lookupValue.getValue());
         validateSortOrder(lookupValue.getSortOrder());
         StatusUtil.validate(lookupValue.getStatus());
@@ -84,17 +84,16 @@ public class LookupValueServiceImpl
         lookupValue.setValueCode(valueCode);
         lookupValue.setCreatedApp("Java");
 
-        // Status default 1 — BaseEntity @PrePersist handle korbe
         return lookupValueRepository.save(lookupValue);
     }
 
     @Override
-    public LookupValue updateLookupValue(
-            Long id, LookupValue lookupValue) {
+    public AssetLookupValue updateLookupValue(
+            Long id, AssetLookupValue lookupValue) {
 
-        LookupValue existing = getLookupValueById(id);
+        AssetLookupValue existing = getLookupValueById(id);
 
-        LookupType type = validateParents(lookupValue);
+        AssetLookupType type = validateParents(lookupValue);
         validateValue(lookupValue.getValue());
         validateSortOrder(lookupValue.getSortOrder());
         StatusUtil.validate(lookupValue.getStatus());
@@ -133,14 +132,14 @@ public class LookupValueServiceImpl
 
     @Override
     public void deleteLookupValue(Long id) {
-        LookupValue existing = getLookupValueById(id);
+        AssetLookupValue existing = getLookupValueById(id);
         lookupValueRepository.delete(existing);
     }
 
     // =========================================
     // VALIDATION HELPERS
     // =========================================
-    private LookupType validateParents(LookupValue lv) {
+    private AssetLookupType validateParents(AssetLookupValue lv) {
         if (lv.getBgId() == null) {
             throw new BadRequestException(
                     "Business Group id cannot be empty");
@@ -170,7 +169,7 @@ public class LookupValueServiceImpl
                     "Business Unit does not belong to selected Business Group");
         }
 
-        LookupType type = lookupTypeRepository
+        AssetLookupType type = lookupTypeRepository
                 .findById(lv.getTypeId())
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Lookup Type not found with id: "
@@ -198,7 +197,6 @@ public class LookupValueServiceImpl
         }
     }
 
-    // Sort order optional — thakle >= 1
     private void validateSortOrder(BigDecimal sortOrder) {
         if (sortOrder != null
                 && sortOrder.compareTo(BigDecimal.ZERO) <= 0) {

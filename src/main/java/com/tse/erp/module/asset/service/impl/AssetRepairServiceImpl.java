@@ -9,7 +9,7 @@ import com.tse.erp.module.asset.entity.AssetRepair;
 import com.tse.erp.module.asset.repository.AssetItemRepository;
 import com.tse.erp.module.asset.repository.AssetRepairRepository;
 import com.tse.erp.module.asset.service.AssetRepairService;
-import com.tse.erp.module.inventory.repository.SupplierRepository;
+import com.tse.erp.module.accounting.repository.AfmSupplierInfoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +24,7 @@ public class AssetRepairServiceImpl implements AssetRepairService {
     private final AssetRepairRepository repository;
     private final BusinessUnitRepository businessUnitRepository;
     private final AssetItemRepository assetItemRepository;
-    private final SupplierRepository supplierRepository;
+    private final AfmSupplierInfoRepository supplierRepository;
 
     @Override
     public List<AssetRepair> getAll(
